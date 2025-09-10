@@ -10,6 +10,7 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+
   header.top{
     position:fixed;z-index:10;top:0;left:0;right:0;height:56px;
     display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
@@ -17,21 +18,21 @@
   }
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
   .stage{
     position:fixed;z-index:1;
-    top:calc(var(--header-h) + 6px + env(safe-area-inset-top));
-    left:calc(6px + env(safe-area-inset-left));
-    right:calc(6px + env(safe-area-inset-right));
-    bottom:calc(6px + env(safe-area-inset-bottom));
-    display:grid;place-items:center;overflow:hidden;background:#000;
+    top:calc(var(--header-h) + 8px);
+    left:8px; right:8px; bottom:8px;
+    display:grid;place-items:center;
+    overflow:hidden;background:#000;
   }
+
   #art{display:block;background:#000}
+
   .loading{
     position:fixed;z-index:2;
-    top:calc(var(--header-h) + 6px + env(safe-area-inset-top));
-    left:calc(6px + env(safe-area-inset-left));
-    right:calc(6px + env(safe-area-inset-right));
-    bottom:calc(6px + env(safe-area-inset-bottom));
+    top:calc(var(--header-h) + 8px);
+    left:8px; right:8px; bottom:8px;
     display:grid;place-items:center;background:#000
   }
   .hidden{display:none}
@@ -68,18 +69,20 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
-  const SAFE_PAD = 2;
-  const LETTER_SPACING_EM = -0.06;
-  const BASE_FONT_PX = Number(new URLSearchParams(location.search).get('px')) || 16;
+  // Ajustes
+  const SAFE_PAD = 2;                 // margen interno para no pegar contra bordes
+  const LETTER_SPACING_EM = -0.06;    // compacidad horizontal
+  const BASE_FONT_PX = 16;            // punto de partida del render intrínseco
+  const MAX_DPR = 3;                  // limita el render para evitar canvases gigantes en iPhone
 
   function computeStretch(){
     const qs = new URLSearchParams(location.search);
-    const qsStretch = parseFloat(qs.get('stretch'));
-    if(!Number.isNaN(qsStretch)) return qsStretch;
-    const lsStretch = parseFloat(localStorage.getItem('ascii_stretch'));
-    if(!Number.isNaN(lsStretch)) return lsStretch;
-    const narrow = Math.min(innerWidth, innerHeight) <= 820 || innerWidth < innerHeight;
-    return narrow ? 1.35 : 1.25; /* más compacto vertical */
+    const qsS = parseFloat(qs.get('stretch'));
+    if(!Number.isNaN(qsS)) return qsS;
+    const lsS = parseFloat(localStorage.getItem('ascii_stretch'));
+    if(!Number.isNaN(lsS)) return lsS;
+    const mobile = (innerWidth < innerHeight) || Math.min(innerWidth, innerHeight) <= 820;
+    return mobile ? 1.35 : 1.25; // más compacto vertical
   }
   let STRETCH = computeStretch();
 
@@ -89,9 +92,11 @@
   }
   setHeaderH();
 
+  // Datos
   let lines=[];
   let content=null;
 
+  // Utilidades
   function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
   async function fetchFoto(id){
     const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});
@@ -111,29 +116,44 @@
     return src.slice(a,b+1);
   }
 
+  function stageSize(){
+    // A veces clientWidth/Height retorna 0 si todavía no layoutó.
+    const cw = stage.clientWidth || Math.max(1, innerWidth - 16);
+    const ch = stage.clientHeight|| Math.max(1, innerHeight - (document.querySelector('header.top')?.offsetHeight||56) - 16);
+    return {cw, ch};
+  }
+
   function measureAt(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const charW=ctx.measureText('M').width;
-    const stepX=Math.max(0.1,charW + LETTER_SPACING_EM*fontPx);
+    const stepX=Math.max(0.1, charW + LETTER_SPACING_EM*fontPx);
     const stepY=Math.max(1, fontPx*STRETCH);
     const rows=lines.length;
     let maxCols=0;
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
-    const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 0;
-    const h = rows*stepY;
+    const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 1;
+    const h = Math.max(1, rows*stepY);
     return {w,h,charW,stepX,stepY,maxCols,rows};
   }
 
   function renderIntrinsic(){
     content = measureAt(BASE_FONT_PX);
 
-    const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
-    canvas.width = Math.max(1, Math.ceil(content.w*dpr));
-    canvas.height= Math.max(1, Math.ceil(content.h*dpr));
+    const dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
+    const W = Math.max(1, Math.ceil(content.w*dpr));
+    const H = Math.max(1, Math.ceil(content.h*dpr));
+
+    // Seteo físico del canvas
+    canvas.width  = W;
+    canvas.height = H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
-    ctx.fillStyle='#000'; ctx.fillRect(0,0,content.w,content.h);
+    // Fondo
+    ctx.fillStyle='#000';
+    ctx.fillRect(0,0,content.w,content.h);
+
+    // Texto
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
     ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
@@ -141,6 +161,7 @@
     const stepX = content.stepX;
     const stepY = content.stepY;
 
+    // Dibujo "a grilla" para evitar distorsión subpíxel
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
       const py = Math.round(y*stepY);
@@ -150,28 +171,36 @@
       }
     }
 
+    // Tamaño CSS base = intrínseco
     canvas.style.width = Math.ceil(content.w)+'px';
     canvas.style.height= Math.ceil(content.h)+'px';
 
+    // Ajuste de escala para que NUNCA exceda la pantalla ni quede tapado
     applyShrinkScale();
   }
 
   function applyShrinkScale(){
     if(!content) return;
-    const availW = Math.max(1, stage.clientWidth  - SAFE_PAD*2);
-    const availH = Math.max(1, stage.clientHeight - SAFE_PAD*2);
-    const scale = Math.min(1, availW/content.w, availH/content.h); // solo shrink
+    const {cw, ch} = stageSize();
+    const availW = Math.max(1, cw - SAFE_PAD*2);
+    const availH = Math.max(1, ch - SAFE_PAD*2);
+
+    // Solo SHRINK (nunca escala > 1) y uniforme para no deformar
+    const scale = Math.min(1, availW/content.w, availH/content.h);
+
     const cssW = Math.floor(content.w * scale);
     const cssH = Math.floor(content.h * scale);
+
     canvas.style.width = cssW + 'px';
     canvas.style.height= cssH + 'px';
   }
 
   function refitAndRedraw(){
-    const newStretch = computeStretch();
-    if(newStretch !== STRETCH){
-      STRETCH = newStretch;
-      renderIntrinsic(); // reflujo completo con nueva altura de renglón
+    setHeaderH();
+    const newS = computeStretch();
+    if(newS !== STRETCH){
+      STRETCH = newS;
+      renderIntrinsic(); // recalcula grilla con nueva altura de línea
     }else{
       applyShrinkScale(); // mantiene centrado y sin recortes
     }
@@ -185,9 +214,10 @@
   }
 
   async function init(){
-    const tmp=readTemp();
-    if(!tmp||!tmp.id){headerMeta.textContent=''; showError('Nada para mostrar'); return}
     try{
+      const tmp=readTemp();
+      if(!tmp||!tmp.id){headerMeta.textContent=''; showError('Nada para mostrar'); return}
+
       const f=await fetchFoto(tmp.id);
       const user=f.usuario?('@'+f.usuario):'@anon';
       const fmt=f.codif?String(f.codif):'';
@@ -196,14 +226,22 @@
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
 
-      renderIntrinsic();
-      showLoaded();
+      // Esperá un frame para que el layout de header/stage esté listo
+      requestAnimationFrame(()=>{
+        renderIntrinsic();
+        showLoaded();
+      });
 
-      addEventListener('resize',()=>{setHeaderH(); refitAndRedraw()});
-      addEventListener('orientationchange',()=>setTimeout(()=>{setHeaderH(); refitAndRedraw()},120));
-      if(window.visualViewport){visualViewport.addEventListener('resize',()=>{setHeaderH(); refitAndRedraw()})}
-      const ro=new ResizeObserver(()=>refitAndRedraw());
-      ro.observe(stage);
+      // Listeners de redimensionado/orientación
+      addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(refitAndRedraw), 120));
+      if(window.visualViewport){
+        visualViewport.addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
+      }
+      if('ResizeObserver' in window){
+        const ro=new ResizeObserver(()=>requestAnimationFrame(refitAndRedraw));
+        ro.observe(stage);
+      }
     }catch(e){
       headerMeta.textContent='Error';
       showError('No se pudo cargar');
@@ -211,11 +249,12 @@
   }
 
   backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
-  init();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 </body>
 </html>
+
 
 
 
