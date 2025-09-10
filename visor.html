@@ -10,7 +10,6 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
-
   header.top{
     position:fixed;z-index:10;top:0;left:0;right:0;height:56px;
     display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
@@ -18,20 +17,21 @@
   }
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
   .stage{
     position:fixed;z-index:1;
-    top:calc(var(--header-h) + 6px);
-    left:6px; right:6px; bottom:6px;
-    display:flex;align-items:center;justify-content:center;
-    overflow:hidden;background:#000;
+    top:calc(var(--header-h) + 6px + env(safe-area-inset-top));
+    left:calc(6px + env(safe-area-inset-left));
+    right:calc(6px + env(safe-area-inset-right));
+    bottom:calc(6px + env(safe-area-inset-bottom));
+    display:grid;place-items:center;overflow:hidden;background:#000;
   }
-
   #art{display:block;background:#000}
-
   .loading{
-    position:fixed;left:6px;right:6px;
-    top:calc(var(--header-h) + 6px);bottom:6px;
+    position:fixed;z-index:2;
+    top:calc(var(--header-h) + 6px + env(safe-area-inset-top));
+    left:calc(6px + env(safe-area-inset-left));
+    right:calc(6px + env(safe-area-inset-right));
+    bottom:calc(6px + env(safe-area-inset-bottom));
     display:grid;place-items:center;background:#000
   }
   .hidden{display:none}
@@ -74,12 +74,12 @@
 
   function computeStretch(){
     const qs = new URLSearchParams(location.search);
-    const fromQS = parseFloat(qs.get('stretch'));
-    if(!Number.isNaN(fromQS)) return fromQS;
-    const fromLS = parseFloat(localStorage.getItem('ascii_stretch'));
-    if(!Number.isNaN(fromLS)) return fromLS;
+    const qsStretch = parseFloat(qs.get('stretch'));
+    if(!Number.isNaN(qsStretch)) return qsStretch;
+    const lsStretch = parseFloat(localStorage.getItem('ascii_stretch'));
+    if(!Number.isNaN(lsStretch)) return lsStretch;
     const narrow = Math.min(innerWidth, innerHeight) <= 820 || innerWidth < innerHeight;
-    return narrow ? 1.6 : 1.4;
+    return narrow ? 1.35 : 1.25; /* más compacto vertical */
   }
   let STRETCH = computeStretch();
 
@@ -116,7 +116,7 @@
     ctx.textBaseline='top';
     const charW=ctx.measureText('M').width;
     const stepX=Math.max(0.1,charW + LETTER_SPACING_EM*fontPx);
-    const stepY=fontPx*STRETCH;
+    const stepY=Math.max(1, fontPx*STRETCH);
     const rows=lines.length;
     let maxCols=0;
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
@@ -138,7 +138,6 @@
     ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
 
-    // Posiciones “snapeadas” para evitar distorsión por subpíxel en iOS
     const stepX = content.stepX;
     const stepY = content.stepY;
 
@@ -161,24 +160,20 @@
     if(!content) return;
     const availW = Math.max(1, stage.clientWidth  - SAFE_PAD*2);
     const availH = Math.max(1, stage.clientHeight - SAFE_PAD*2);
-
-    const scale = Math.min(1, availW/content.w, availH/content.h);
-
+    const scale = Math.min(1, availW/content.w, availH/content.h); // solo shrink
     const cssW = Math.floor(content.w * scale);
     const cssH = Math.floor(content.h * scale);
-
     canvas.style.width = cssW + 'px';
     canvas.style.height= cssH + 'px';
   }
 
   function refitAndRedraw(){
-    // Recalcular stretch por si cambió orientación/tamaño
     const newStretch = computeStretch();
     if(newStretch !== STRETCH){
       STRETCH = newStretch;
-      renderIntrinsic();
+      renderIntrinsic(); // reflujo completo con nueva altura de renglón
     }else{
-      applyShrinkScale();
+      applyShrinkScale(); // mantiene centrado y sin recortes
     }
   }
 
