@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Cámara</title>
+<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+<style>
+  :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--ring:#2b2b2b;--max:1100px;--red:#e02424;--red-2:#ff6b6b}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow:hidden}
+  .shell{height:100svh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);display:grid;grid-template-rows:56px 1fr 88px;gap:8px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);gap:10px;position:relative}
+  .left,.right{display:flex;align-items:center;gap:10px}
+  .btn,.select{font-size:12px;color:var(--ink);background:#111;border:1px solid var(--ring);border-radius:10px;height:32px;padding:0 10px;user-select:none}
+  .btn:active{transform:translateY(1px)}
+  .btn.icon{display:flex;align-items:center;justify-content:center;width:36px;padding:0}
+  .btn.tgl{display:flex;align-items:center;justify-content:center;gap:6px;min-width:96px}
+  .btn.on{background:#1b1b1b;border-color:#3a3a3a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+  .btn.tgl svg{width:16px;height:16px}
+  .select{appearance:none}
+  .stage{display:grid;place-items:center;padding:0 10px;position:relative}
+  canvas#visor{display:block;width:80%;height:auto;max-height:calc(100% - 4px);outline:1px solid var(--line);border-radius:14px;background:#0b0b0b}
+  @media (min-width:900px){canvas#visor{width:56%}}
+  .bar{display:flex;align-items:center;justify-content:center}
+  .upload{height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--ring);background:#111;color:#eaeaea;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px}
+  .composer{position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;color:#171717;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.06);display:none}
+  .composer .row{max-width:var(--max);margin:0 auto;display:flex;align-items:center;gap:8px;justify-content:center}
+  .composer input[type="text"]{flex:1;max-width:720px;border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:16px;outline:none;min-width:0;background:#fff;color:#171717;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .composer .send{border:none;background:#111;color:#fff;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:var(--red);color:#fff;border:1px solid var(--red-2);border-radius:10px;padding:10px 14px;z-index:9999;box-shadow:0 10px 28px rgba(0,0,0,.3);display:none;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .toast.show{display:block}
+  .menu{position:absolute;right:10px;top:48px;background:#0f0f0f;border:1px solid var(--ring);border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.5);padding:8px;display:none;z-index:100}
+  .menu.show{display:grid;gap:6px}
+  .menu .item{display:flex;align-items:center;gap:8px;border:1px solid var(--ring);background:#131313;color:#eaeaea;border-radius:10px;padding:8px 10px;font-size:12px;cursor:pointer}
+  .menu .item:active{transform:translateY(1px)}
+  .menu .item.active{background:#ffffff;color:#000;border-color:#ffffff}
+  .loader{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.25);backdrop-filter:saturate(1.1) blur(1px);border-radius:14px}
+  .loader.show{display:grid}
+  .spinner{width:44px;height:44px}
+  input[type=file]{display:none}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="left">
+        <button id="backBtn" class="btn icon" title="Volver" aria-label="Volver">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+      </div>
+      <div class="right">
+        <button id="mirrorBtn" class="btn tgl" aria-pressed="false" title="Espejar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"></path><path d="M9 8l-4 4 4 4"></path><path d="M15 8l4 4-4 4"></path></svg>
+          <span>Espejar</span>
+        </button>
+        <select id="ramp" class="select" title="Ramp">
+          <option value=" .:-=+*#%@" selected>Ramp: Básico</option>
+          <option value=" .'`^\",:;Il!i~+_-?][}{1)(|\\tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$">Ramp: Denso</option>
+          <option value=" 0123456789">Ramp: Números</option>
+          <option value="  .,,;;ccooaaddqqWWMM@@" >Ramp: Bloques</option>
+        </select>
+        <button id="settingsBtn" class="btn icon" title="Ajustes" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.4 15a1.65 1.65 0 0 0-1.51-1H2a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 3.4 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 5.84 3.3l.06.06A1.65 1.65 0 0 0 7.72 3a1.65 1.65 0 0 0 1-1.51V1a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 3.4a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 8.6c0 .6.23 1.18.64 1.6.42.41.96.64 1.6.64"></path></svg>
+        </button>
+        <div id="settingsMenu" class="menu" role="menu" aria-hidden="true">
+          <button class="item" id="brightTgl" role="menuitem" aria-pressed="false">Aumentar luminosidad</button>
+          <button class="item" id="contrastTgl" role="menuitem" aria-pressed="false">Aumentar contraste</button>
+          <button class="item" id="darkTgl" role="menuitem" aria-pressed="false">Oscurecer</button>
+          <button class="item" id="invertTgl" role="menuitem" aria-pressed="false">Invertir</button>
+        </div>
+      </div>
+    </header>
+    <div class="stage">
+      <div class="loader" id="loader">
+        <svg class="spinner" viewBox="0 0 50 50" aria-label="Cargando">
+          <circle cx="25" cy="25" r="20" stroke="#2b2b2b" stroke-width="6" fill="none"/>
+          <path d="M25 5 a20 20 0 0 1 0 40" stroke="#eaeaea" stroke-width="6" fill="none" stroke-linecap="round">
+            <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.9s" repeatCount="indefinite"/>
+          </path>
+        </svg>
+      </div>
+      <canvas id="visor"></canvas>
+    </div>
+    <div class="bar">
+      <button id="uploadBtn" class="upload" aria-label="Subir foto">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="5" x2="12" y2="21"/></svg>
+        Subir foto
+      </button>
+    </div>
+  </div>
+  <div class="composer" id="composer">
+    <div class="row">
+      <input type="text" id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)">
+      <button class="send" id="sendBtn">Publicar</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <canvas id="off"></canvas>
+  <input type="file" id="fileInput" accept="image/*">
+<script>
+(()=>{const visor=document.getElementById('visor');const vctx=visor.getContext('2d',{alpha:false});const off=document.getElementById('off');const octx=off.getContext('2d',{willReadFrequently:true});const backBtn=document.getElementById('backBtn');const mirrorBtn=document.getElementById('mirrorBtn');const rampEl=document.getElementById('ramp');const settingsBtn=document.getElementById('settingsBtn');const settingsMenu=document.getElementById('settingsMenu');const brightTgl=document.getElementById('brightTgl');const contrastTgl=document.getElementById('contrastTgl');const darkTgl=document.getElementById('darkTgl');const invertTgl=document.getElementById('invertTgl');const uploadBtn=document.getElementById('uploadBtn');const fileInput=document.getElementById('fileInput');const loader=document.getElementById('loader');const composer=document.getElementById('composer');const composeTxt=document.getElementById('composeTxt');const sendBtn=document.getElementById('sendBtn');const toast=document.getElementById('toast');let asciiText='';const state={ramp:rampEl.value,mirror:false,invert:false,sw:640,sh:480,fontPx:12,charW:7,lineH:14,brightness:0,contrast:1,fx:{bright:false,contrast:false,dark:false},stretch:1.4,source:null};function baseStretch(){const st=document.querySelector('.stage');const w=st?st.clientWidth:window.innerWidth;return w<=768?1.6:1.4}function applyStretchFromEnv(){state.stretch=baseStretch()}const L=(r,g,b)=>{const rl=Math.pow(r/255,2.2),gl=Math.pow(g/255,2.2),bl=Math.pow(b/255,2.2);const lin=0.2126*rl+0.7152*gl+0.0722*bl;return Math.pow(lin,1/2.2)*255};const clamp=(v,min,max)=>v<min?min:v>max?max:v;function pick(lum,ramp){const n=ramp.length-1;let i=clamp(Math.floor((lum/255)*n+0.00001),0,n);if(state.invert)i=n-i;return ramp[i]}function showLoader(on){loader.classList.toggle('show',!!on)}function showToast(msg){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1500)}function currentCodif(){const lbl=rampEl.options[rampEl.selectedIndex]?.text||'';if(/Básico/i.test(lbl))return'Basico';if(/Denso/i.test(lbl))return'Denso';if(/Números/i.test(lbl))return'Numeros';if(/Bloques/i.test(lbl))return'Bloques';return lbl.trim()||'Desconocido'}function getUser(){return localStorage.getItem('user_nombre')||''}function tone(lum){let v=lum+((state.fx.bright?40:0)+(state.fx.dark?-40:0));v=((v-128)*(state.fx.contrast?1.35:1))+128;return clamp(v,0,255)}function measureMetrics(px){vctx.font=`${px}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;const m=vctx.measureText('M');const cw=m.width||px;const ch=(m.actualBoundingBoxAscent&&m.actualBoundingBoxDescent)?(m.actualBoundingBoxAscent+m.actualBoundingBoxDescent):px;return{cw,ch}}function setInternalSize(w,h){state.sw=Math.max(1,Math.floor(w));state.sh=Math.max(1,Math.floor(h));visor.width=state.sw;visor.height=state.sh;calibrateFont()}function calibrateFont(){applyStretchFromEnv();let px=16;let met=measureMetrics(px);let step=Math.ceil(met.ch*state.stretch);while((state.sw/met.cw)<80||(state.sh/step)<40){px=Math.max(6,px-1);met=measureMetrics(px);step=Math.ceil(met.ch*state.stretch);if(px===6)break}state.fontPx=px;state.charW=met.cw;state.lineH=step;vctx.textBaseline='top';vctx.imageSmoothingEnabled=false}function grid(){return{cols:Math.max(8,Math.floor(state.sw/state.charW)),rows:Math.max(8,Math.floor(state.sh/state.lineH))}}function sample(source){const{cols,rows}=grid();off.width=cols;off.height=rows;octx.save();octx.clearRect(0,0,cols,rows);octx.imageSmoothingEnabled=true;if(state.mirror){octx.translate(cols,0);octx.scale(-1,1)}octx.drawImage(source,0,0,cols,rows);octx.restore();return octx.getImageData(0,0,cols,rows)}function drawFrom(source){const img=sample(source),data=img.data;const{cols,rows}=grid(),ramp=state.ramp;vctx.fillStyle='#0a0a0a';vctx.fillRect(0,0,visor.width,visor.height);vctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';vctx.font=`${state.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;for(let y=0;y<rows;y++){const sy=Math.round(y*state.lineH);for(let x=0;x<cols;x++){const sx=Math.round(x*state.charW);const i=(y*cols+x)*4;const lum=tone(L(data[i],data[i+1],data[i+2]));const ch=pick(lum,ramp);vctx.fillText(ch,sx,sy)}}}function asciiFrom(source){const img=sample(source),data=img.data;const{cols,rows}=grid(),ramp=state.ramp;let out='';for(let y=0;y<rows;y++){let line='';for(let x=0;x<cols;x++){const i=(y*cols+x)*4;const lum=tone(L(data[i],data[i+1],data[i+2]));line+=pick(lum,ramp)}out+=line+(y<rows-1?'\n':'')}return out}function asciiWithMarkers(s){return s.split('\n').map(line=>'X*****'+line+'*****X').join('\n')}rampEl.onchange=()=>{state.ramp=rampEl.value;if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};mirrorBtn.onclick=()=>{state.mirror=!state.mirror;mirrorBtn.classList.toggle('on',state.mirror);mirrorBtn.setAttribute('aria-pressed',String(state.mirror));if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};invertTgl.onclick=()=>{state.invert=!state.invert;invertTgl.classList.toggle('active',state.invert);invertTgl.setAttribute('aria-pressed',String(state.invert));if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};settingsBtn.onclick=(e)=>{e.stopPropagation();const shown=settingsMenu.classList.toggle('show');settingsBtn.setAttribute('aria-expanded',String(shown));settingsMenu.setAttribute('aria-hidden',String(!shown))};document.addEventListener('click',(e)=>{if(!settingsMenu.contains(e.target)&&e.target!==settingsBtn){settingsMenu.classList.remove('show');settingsBtn.setAttribute('aria-expanded','false');settingsMenu.setAttribute('aria-hidden','true')}});brightTgl.onclick=()=>{state.fx.bright=!state.fx.bright;brightTgl.classList.toggle('active',state.fx.bright);brightTgl.setAttribute('aria-pressed',String(state.fx.bright));if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};contrastTgl.onclick=()=>{state.fx.contrast=!state.fx.contrast;contrastTgl.classList.toggle('active',state.fx.contrast);contrastTgl.setAttribute('aria-pressed',String(state.fx.contrast));if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};darkTgl.onclick=()=>{state.fx.dark=!state.fx.dark;darkTgl.classList.toggle('active',state.fx.dark);darkTgl.setAttribute('aria-pressed',String(state.fx.dark));if(state.source){drawFrom(state.source);asciiText=asciiFrom(state.source)}};uploadBtn.onclick=()=>{fileInput.click()};fileInput.onchange=(e)=>{const f=e.target.files&&e.target.files[0];if(!f)return;showLoader(true);const img=new Image();img.onload=()=>{state.source=img;setInternalSize(img.naturalWidth||img.width,img.naturalHeight||img.height);drawFrom(img);asciiText=asciiFrom(img);composer.style.display='block';showLoader(false)};img.onerror=()=>{showLoader(false);showToast('No se pudo abrir la imagen.')};const url=URL.createObjectURL(f);img.src=url};sendBtn.onclick=async()=>{const user=getUser();if(!user){showToast('Sesión no iniciada.');setTimeout(()=>location.href='/',900);return}if(!asciiText){if(state.source){asciiText=asciiFrom(state.source)}else{showToast('No hay imagen.');return}}const codif=currentCodif();const nota=(composeTxt.value||'').trim();const asciiDB=asciiWithMarkers(asciiText);const original=sendBtn.textContent;sendBtn.textContent='Publicando…';sendBtn.disabled=true;try{const r1=await fetch('/api/imagen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({txt:asciiDB,codif,user})});const j1=await r1.json().catch(()=>({}));if(!r1.ok||!j1.ok)throw 0;const r2=await fetch('/api/idobtain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user,txt:asciiDB})});const j2=await r2.json().catch(()=>({}));const fotoId=j2?.id;if(!r2.ok||!j2.ok||!Number.isFinite(fotoId))throw 0;const textForPost=`f(${fotoId})`+(nota?nota:'');const r3=await fetch('/api/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'create',user,text:textForPost})});const j3=await r3.json().catch(()=>({}));if(!(r3.ok&&j3.ok))throw 0;sendBtn.textContent='Publicado';setTimeout(()=>location.href='/',1000)}catch{sendBtn.textContent='Error';setTimeout(()=>{sendBtn.textContent=original;sendBtn.disabled=false},1200)}};backBtn.onclick=()=>{if(history.length>1){history.back()}else{location.href='/'}};function resizer(){const prev=state.stretch;applyStretchFromEnv();if(Math.abs(prev-state.stretch)>0.01&&state.source){calibrateFont();drawFrom(state.source);asciiText=asciiFrom(state.source)}}window.addEventListener('resize',resizer);window.addEventListener('orientationchange',()=>setTimeout(resizer,140));if(window.visualViewport){visualViewport.addEventListener('resize',resizer)}setInternalSize(640,480)})();
+</script>
+</body>
+</html>
