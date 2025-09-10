@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Atención</title>
+  <link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fff; --ink:#171717; --ink-2:#61656f; --line:#e3e1dc; 
+      --shadow:0 10px 28px rgba(0,0,0,.07); --r:16px;
+      --red:#e02424; --black:#000; --ok:#0a7;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:20px; font-family:Inter,system-ui,sans-serif;
+      background:#fff; /* fondo blanco */
+      color:var(--ink); display:flex; justify-content:center; align-items:center; min-height:100vh;
+    }
+    .card{
+      max-width:640px; width:100%; background:#f4f4f4; /* gris claro */
+      border:1px solid var(--line);
+      border-radius:var(--r); box-shadow:var(--shadow); padding:24px;
+    }
+    h1{margin:0 0 12px;font-size:1.4rem}
+    .alert{
+      background:#fff9e6; border:1px solid #f3dda3; color:#5f4b00;
+      padding:12px; border-radius:12px; margin:12px 0;
+    }
+    .alert a{color:inherit;text-decoration:underline;}
+    .urlbox{
+      background:#fafafa; border:1px solid var(--line); border-radius:10px;
+      padding:10px; font-family:monospace; word-break:break-all; font-size:.95rem;
+      color:#0a3; margin:8px 0 16px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
+    .btn{
+      border:1px solid var(--line); border-radius:10px; padding:10px 16px; cursor:pointer;
+      font-weight:700; font-size:1rem;
+    }
+    .btn.primary{background:#111;color:#fff;border-color:#111;}
+    .btn.ghost{background:#fff;color:#111;}
+    .muted{color:var(--ink-2); font-size:.95rem;}
+  </style>
+</head>
+<body>
+  <div class="card" id="card"></div>
+
+  <script>
+    (function(){
+      const card = document.getElementById('card');
+
+      function to404(){
+        location.href = 'index.html';
+      }
+
+      function escapeHtml(s){
+        return String(s).replace(/[&<>"']/g, ch => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+        }[ch]));
+      }
+
+      let payload=null;
+      try{
+        const raw = localStorage.getItem('temp_url');
+        if(raw){
+          const obj = JSON.parse(raw);
+          if(obj && obj.url && obj.exp && Date.now()<=obj.exp){
+            payload = obj;
+          } else {
+            localStorage.removeItem('temp_url');
+          }
+        }
+      }catch{}
+
+      if(!payload){ to404(); return; }
+
+      let domain='';
+      try{ domain=new URL(payload.url).hostname; }catch{}
+
+      card.innerHTML=`
+        <h1>Atención: estás saliendo del sitio</h1>
+        <div class="alert">
+          Vas a abrir un recurso externo (<b>${escapeHtml(domain||'destino')}</b>).<br>
+          Según nuestros <a href="tyc.html"><b><u>Términos y Condiciones de uso</u></b></a>, no somos responsables por el
+          contenido ni la seguridad del sitio al que vas a ingresar.
+        </div>
+        <div class="muted">Destino:</div>
+        <div class="urlbox">${escapeHtml(payload.url)}</div>
+        <div class="row">
+          <button id="goBtn" class="btn primary">Ir al sitio</button>
+          <button id="cancelBtn" class="btn ghost">Cancelar</button>
+        </div>
+      `;
+
+      document.getElementById('goBtn').onclick=()=>{
+        try{
+          const raw=localStorage.getItem('temp_url');
+          if(!raw){ to404(); return; }
+          const obj=JSON.parse(raw);
+          if(!obj||!obj.url||!obj.exp||Date.now()>obj.exp){
+            localStorage.removeItem('temp_url');
+            to404(); return;
+          }
+          location.href=obj.url;
+        }catch{ to404(); }
+      };
+
+      document.getElementById('cancelBtn').onclick=()=>{
+        if(history.length>1){ history.back(); }
+        else{ location.href='index.html'; }
+      };
+    })();
+  </script>
+</body>
+</html>
