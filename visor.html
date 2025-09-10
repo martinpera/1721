@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Visor</title>
-<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
   :root{--bg:#000;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
@@ -25,9 +25,7 @@
     left:8px; right:8px; bottom:8px;
     display:grid;place-items:center;overflow:hidden;background:#000;
   }
-
-  #art{display:block;background:#000}
-
+  canvas#art{display:block;background:#000;image-rendering:auto}
   .loading{
     position:fixed;z-index:2;
     top:calc(var(--header-h) + 8px);
@@ -68,19 +66,23 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
+  // límites seguros para Safari/iOS (si te pasás, el canvas queda negro)
+  const MAX_SIDE = 8192;                 // px por lado
+  const MAX_AREA = 16777216;             // ~16.7M px
   const SAFE_PAD = 2;
   const LETTER_SPACING_EM = -0.06;
-  const BASE_FONT_PX = 16;
-  const MAX_DPR = 3;
+  const BASE_FONT_PX_DEFAULT = 16;
+  const MIN_FONT_PX = 6;
+  const MAX_DPR = navigator.userAgent.includes('iPhone')||navigator.userAgent.includes('iPad') ? 2 : 3;
 
   function computeStretch(){
     const qs = new URLSearchParams(location.search);
-    const qsS = parseFloat(qs.get('stretch'));
-    if(!Number.isNaN(qsS)) return qsS;
-    const lsS = parseFloat(localStorage.getItem('ascii_stretch'));
-    if(!Number.isNaN(lsS)) return lsS;
-    const mobile = (innerWidth < innerHeight) || Math.min(innerWidth, innerHeight) <= 820;
-    return mobile ? 1.35 : 1.25;
+    const p = parseFloat(qs.get('stretch'));
+    if(!Number.isNaN(p)) return p;
+    const ls = parseFloat(localStorage.getItem('ascii_stretch'));
+    if(!Number.isNaN(ls)) return ls;
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent) || Math.min(innerWidth, innerHeight) <= 820;
+    return isMobile ? 1.30 : 1.15; // menos "estirado" en desktop
   }
   let STRETCH = computeStretch();
 
@@ -90,8 +92,7 @@
   }
   setHeaderH();
 
-  let lines=[];
-  let content=null;
+  let lines=[], content=null;
 
   function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
 
@@ -121,15 +122,17 @@
   }
 
   function stageSize(){
-    const cw = stage.clientWidth || Math.max(1, innerWidth - 16);
-    const ch = stage.clientHeight|| Math.max(1, innerHeight - (document.querySelector('header.top')?.offsetHeight||56) - 16);
+    // no confiamos en clientHeight de Safari; calculamos manual
+    const headerH=(document.querySelector('header.top')?.offsetHeight||56);
+    const cw = Math.max(1, innerWidth - 16);
+    const ch = Math.max(1, innerHeight - headerH - 16);
     return {cw, ch};
   }
 
   function measureAt(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
-    const charW=ctx.measureText('M').width;
+    const charW=ctx.measureText('M').width||fontPx*0.6;
     const stepX=Math.max(0.1, charW + LETTER_SPACING_EM*fontPx);
     const stepY=Math.max(1, fontPx*STRETCH);
     const rows=lines.length;
@@ -137,34 +140,67 @@
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
     const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 1;
     const h = Math.max(1, rows*stepY);
-    return {w,h,charW,stepX,stepY,maxCols,rows};
+    return {w,h,charW,stepX,stepY,maxCols,rows,fontPx};
+  }
+
+  function pickSafeFontPx(startPx){
+    let px = Math.max(MIN_FONT_PX, startPx|0);
+    let dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
+
+    // Si excede límites, bajamos px hasta que entre
+    for(let i=0;i<40;i++){
+      const m = measureAt(px);
+      const W = Math.ceil(m.w * dpr);
+      const H = Math.ceil(m.h * dpr);
+      const area = W*H;
+
+      if(W <= MAX_SIDE && H <= MAX_SIDE && area <= MAX_AREA){
+        return {px, dpr, metrics:m};
+      }
+      // bajar un poquito y reintentar
+      px = Math.max(MIN_FONT_PX, Math.floor(px*0.9));
+    }
+    // último recurso
+    return {px:MIN_FONT_PX, dpr:Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1)), metrics:measureAt(MIN_FONT_PX)};
   }
 
   function renderIntrinsic(){
-    content = measureAt(BASE_FONT_PX);
-    const dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
+    const pick = pickSafeFontPx(BASE_FONT_PX_DEFAULT);
+    const dpr = pick.dpr;
+    content = pick.metrics;
+
     const W = Math.max(1, Math.ceil(content.w*dpr));
     const H = Math.max(1, Math.ceil(content.h*dpr));
     canvas.width  = W;
     canvas.height = H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    // fondo
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
-    ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+
+    // texto
+    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim() || '#eaeaea';
+    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
+
     const stepX = content.stepX;
     const stepY = content.stepY;
+
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
       const py = Math.round(y*stepY);
+      // dibujar por carácter (control fino del espaciado)
       for(let x=0;x<line.length;x++){
         const px = Math.round(x*stepX);
         ctx.fillText(line[x], px, py);
       }
     }
+
+    // tamaño CSS intrínseco
     canvas.style.width = Math.ceil(content.w)+'px';
     canvas.style.height= Math.ceil(content.h)+'px';
+
     applyShrinkScale();
   }
 
@@ -173,21 +209,19 @@
     const {cw, ch} = stageSize();
     const availW = Math.max(1, cw - SAFE_PAD*2);
     const availH = Math.max(1, ch - SAFE_PAD*2);
-    const scale = Math.min(1, availW/content.w, availH/content.h);
-    const cssW = Math.floor(content.w * scale);
-    const cssH = Math.floor(content.h * scale);
-    canvas.style.width = cssW + 'px';
-    canvas.style.height= cssH + 'px';
+    const scale = Math.min(1, availW/content.w, availH/content.h); // solo shrink, uniforme
+    canvas.style.width  = Math.floor(content.w * scale) + 'px';
+    canvas.style.height = Math.floor(content.h * scale) + 'px';
   }
 
   function refitAndRedraw(){
-    setHeaderH();
     const newS = computeStretch();
-    if(newS !== STRETCH){
+    setHeaderH();
+    if(Math.abs(newS - STRETCH) > 0.001){
       STRETCH = newS;
-      renderIntrinsic();
+      renderIntrinsic(); // cambia la grilla (altura de línea)
     }else{
-      applyShrinkScale();
+      applyShrinkScale(); // mantiene escala/centrado sin redibujar
     }
   }
 
@@ -206,19 +240,18 @@
       const user=f.usuario?('@'+f.usuario):'@anon';
       const fmt=f.codif?String(f.codif):'';
       headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
+
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
-      await nextFrame();
+
+      await nextFrame(); // esperar layout real (iOS)
       renderIntrinsic();
       showLoaded();
+
       addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
       addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(refitAndRedraw), 140));
       if(window.visualViewport){
         visualViewport.addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
-      }
-      if('ResizeObserver' in window){
-        const ro=new ResizeObserver(()=>requestAnimationFrame(refitAndRedraw));
-        ro.observe(stage);
       }
     }catch(e){
       headerMeta.textContent='Error';
@@ -232,6 +265,7 @@
 </script>
 </body>
 </html>
+
 
 
 
