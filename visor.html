@@ -9,7 +9,7 @@
   :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
 
   header.top{
     position:fixed;z-index:10;top:0;left:0;right:0;height:56px;
@@ -19,7 +19,6 @@
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* El escenario es ESTRICTAMENTE menor al viewport: 6px de margen en cada borde */
   .stage{
     position:fixed;z-index:1;
     top:calc(var(--header-h) + 6px);
@@ -28,8 +27,7 @@
     overflow:hidden;background:#000;
   }
 
-  /* Canvas ocupa el escenario (que ya es menor al viewport) */
-  #art{display:block;width:100%;height:100%;background:#000}
+  #art{display:block;background:#000}
 
   .loading{
     position:fixed;left:6px;right:6px;
@@ -70,8 +68,13 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
-  // margen interno extra (además de los 6px CSS) para evitar cualquier recorte por subpíxel
-  const SAFE_PAD = 2;
+  // Solo SHRINK, nunca enlarge
+  const SAFE_PAD = 2;                   // margen interno para que no toque bordes
+  const LETTER_SPACING_EM = -0.06;      // emula letter-spacing del ASCII
+  const BASE_FONT_PX = Number(new URLSearchParams(location.search).get('px')) || 16;
+  const baseStretch = (innerWidth<=768)?1.5:1.5;
+  const STRETCH = parseFloat(new URLSearchParams(location.search).get('stretch'))||
+                  parseFloat(localStorage.getItem('ascii_stretch'))||baseStretch;
 
   function setHeaderH(){
     const h=(document.querySelector('header.top')?.offsetHeight||56);
@@ -81,13 +84,8 @@
   addEventListener('resize',setHeaderH);
   if(window.visualViewport){visualViewport.addEventListener('resize',setHeaderH)}
 
-  // Spacing/line-height del ASCII
-  const LETTER_SPACING_EM=-0.06;
-  const baseStretch = (innerWidth<=768)?1.5:1.5;
-  const STRETCH = parseFloat(new URLSearchParams(location.search).get('stretch'))||
-                  parseFloat(localStorage.getItem('ascii_stretch'))||baseStretch;
-
-  let lines=[];
+  let lines=[];          // arreglo de líneas ASCII
+  let content = null;    // {w,h,charW,stepX,stepY} medido a BASE_FONT_PX
 
   function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
   async function fetchFoto(id){
@@ -95,7 +93,6 @@
     if(!r.ok)throw new Error('No se pudo obtener la imagen');
     const j=await r.json(); if(!j||!j.ok||!j.foto)throw new Error(j?.message||'No encontrado'); return j.foto;
   }
-
   function parseWithMarkers(s){
     const out=[], re=/X\*{5}([\s\S]*?)\*{5}X/g; let m, any=false;
     while((m=re.exec(s))!==null){ any=true; out.push(m[1]) }
@@ -109,18 +106,7 @@
     return src.slice(a,b+1);
   }
 
-  function setCanvasSize(){
-    const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
-    const cssW=Math.max(1,Math.floor(stage.clientWidth));
-    const cssH=Math.max(1,Math.floor(stage.clientHeight));
-    canvas.width=Math.max(1,cssW*dpr);
-    canvas.height=Math.max(1,cssH*dpr);
-    canvas.style.width=cssW+'px';
-    canvas.style.height=cssH+'px';
-    ctx.setTransform(dpr,0,0,dpr,0,0); // coordenadas en CSS px
-  }
-
-  function measure(fontPx){
+  function measureAt(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const charW=ctx.measureText('M').width;
@@ -129,61 +115,65 @@
     const rows=lines.length;
     let maxCols=0;
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
-    const width  = maxCols>0 ? (stepX*(maxCols-1) + charW) : 0; // sin spacing al final
-    const height = rows*stepY;
-    return {charW,stepX,stepY,width,height};
+    const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 0;
+    const h = rows*stepY;
+    return {w,h,charW,stepX,stepY};
   }
 
-  function draw(fontPx){
-    const cssW=stage.clientWidth, cssH=stage.clientHeight;
-    ctx.fillStyle='#000'; ctx.fillRect(0,0,cssW,cssH);
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
-    ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
-    ctx.textBaseline='top';
+  function renderIntrinsic(){
+    // Medimos a tamaño base (intrínseco)
+    content = measureAt(BASE_FONT_PX);
 
-    const {charW,stepX,stepY,width,height}=measure(fontPx);
-    const left = Math.floor((cssW - width)/2);
-    const top  = Math.floor((cssH - height)/2);
+    // Preparamos canvas a resolución de pantalla para nitidez
+    const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+    canvas.width = Math.max(1, Math.ceil(content.w*dpr));
+    canvas.height= Math.max(1, Math.ceil(content.h*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    // Dibujamos ASCII centrado dentro del propio canvas intrínseco
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,content.w,content.h);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
+    ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.textBaseline='top';
 
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
       for(let x=0;x<line.length;x++){
-        const ch=line[x];
-        const px = left + x*stepX;
-        const py = top + y*stepY;
-        ctx.fillText(ch, px, py);
+        ctx.fillText(line[x], x*content.stepX, y*content.stepY);
       }
     }
+
+    // Seteamos el tamaño CSS INTRÍNSECO (sin escalar todavía)
+    canvas.style.width = Math.ceil(content.w)+'px';
+    canvas.style.height= Math.ceil(content.h)+'px';
+
+    // Luego ajustamos escala CSS para que entre en el stage sin recortes (solo shrink)
+    applyShrinkScale();
   }
 
-  function fitAndRender(){
-    if(!lines.length){ ctx.clearRect(0,0,canvas.width,canvas.height); return }
-    setCanvasSize();
+  function applyShrinkScale(){
+    if(!content) return;
+    const availW = Math.max(1, stage.clientWidth  - SAFE_PAD*2);
+    const availH = Math.max(1, stage.clientHeight - SAFE_PAD*2);
+    const scale = Math.min(1, availW/content.w, availH/content.h);
 
-    // área disponible estrictamente menor que el rectángulo visual
-    const availW=Math.max(1, stage.clientWidth  - SAFE_PAD*2);
-    const availH=Math.max(1, stage.clientHeight - SAFE_PAD*2);
+    const cssW = Math.floor(content.w * scale);
+    const cssH = Math.floor(content.h * scale);
 
-    let lo=4, hi=640, best=4;
-    while(lo<=hi){
-      const mid=(lo+hi)>>1;
-      const m=measure(mid);
-      if(m.width<=availW && m.height<=availH){best=mid;lo=mid+1}else{hi=mid-1}
-    }
-    best=Math.max(4,best-1); // margen anti-subpíxel
-    draw(best);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height= cssH + 'px';
   }
 
   function showLoaded(){loading.classList.add('hidden')}
   function showError(msg){
     lines=[msg||'No se pudo cargar'];
-    fitAndRender();
+    renderIntrinsic();
     showLoaded();
   }
 
   function mkRedraw(){
     let ticking=false;
-    return ()=>{ if(ticking) return; ticking=true; requestAnimationFrame(()=>{ticking=false; fitAndRender()}) };
+    return ()=>{ if(ticking) return; ticking=true; requestAnimationFrame(()=>{ticking=false; applyShrinkScale()}) };
   }
 
   async function init(){
@@ -198,12 +188,12 @@
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
 
-      fitAndRender();
+      renderIntrinsic();
       showLoaded();
 
       const redraw=mkRedraw();
       addEventListener('resize',redraw);
-      addEventListener('orientationchange',()=>setTimeout(redraw,140));
+      addEventListener('orientationchange',()=>setTimeout(redraw,120));
       if(window.visualViewport){visualViewport.addEventListener('resize',redraw)}
       const ro=new ResizeObserver(redraw);
       ro.observe(stage);
