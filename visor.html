@@ -6,7 +6,7 @@
 <title>Visor</title>
 <link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
-  :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--ring:#2b2b2b;--header-h:56px}
+  :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
@@ -19,14 +19,23 @@
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+  /* El escenario es ESTRICTAMENTE menor al viewport: 6px de margen en cada borde */
   .stage{
-    position:fixed;z-index:1;top:var(--header-h);left:0;right:0;bottom:0;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000
+    position:fixed;z-index:1;
+    top:calc(var(--header-h) + 6px);
+    left:6px; right:6px; bottom:6px;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;background:#000;
   }
-  /* Canvas ocupa 100% del rectángulo visible, sin bordes/padding */
+
+  /* Canvas ocupa el escenario (que ya es menor al viewport) */
   #art{display:block;width:100%;height:100%;background:#000}
 
-  .loading{position:fixed;left:0;right:0;top:var(--header-h);bottom:0;display:grid;place-items:center;background:#000}
+  .loading{
+    position:fixed;left:6px;right:6px;
+    top:calc(var(--header-h) + 6px);bottom:6px;
+    display:grid;place-items:center;background:#000
+  }
   .hidden{display:none}
 </style>
 </head>
@@ -61,15 +70,18 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
+  // margen interno extra (además de los 6px CSS) para evitar cualquier recorte por subpíxel
+  const SAFE_PAD = 2;
+
   function setHeaderH(){
-    const h=document.querySelector('header.top')?.offsetHeight||56;
+    const h=(document.querySelector('header.top')?.offsetHeight||56);
     document.documentElement.style.setProperty('--header-h',h+'px');
   }
   setHeaderH();
   addEventListener('resize',setHeaderH);
   if(window.visualViewport){visualViewport.addEventListener('resize',setHeaderH)}
 
-  // Stretch (alto de línea en múltiplos del font-size) y letter-spacing emulado
+  // Spacing/line-height del ASCII
   const LETTER_SPACING_EM=-0.06;
   const baseStretch = (innerWidth<=768)?1.5:1.5;
   const STRETCH = parseFloat(new URLSearchParams(location.search).get('stretch'))||
@@ -99,25 +111,25 @@
 
   function setCanvasSize(){
     const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
-    const cssW=stage.clientWidth;
-    const cssH=stage.clientHeight;
-    canvas.width=Math.max(1,Math.floor(cssW*dpr));
-    canvas.height=Math.max(1,Math.floor(cssH*dpr));
+    const cssW=Math.max(1,Math.floor(stage.clientWidth));
+    const cssH=Math.max(1,Math.floor(stage.clientHeight));
+    canvas.width=Math.max(1,cssW*dpr);
+    canvas.height=Math.max(1,cssH*dpr);
     canvas.style.width=cssW+'px';
     canvas.style.height=cssH+'px';
-    ctx.setTransform(dpr,0,0,dpr,0,0); // coord. en CSS px
+    ctx.setTransform(dpr,0,0,dpr,0,0); // coordenadas en CSS px
   }
 
   function measure(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const charW=ctx.measureText('M').width;
-    const stepX=Math.max(0.1,charW + LETTER_SPACING_EM*fontPx); // avance por carácter
+    const stepX=Math.max(0.1,charW + LETTER_SPACING_EM*fontPx);
     const stepY=fontPx*STRETCH;
     const rows=lines.length;
     let maxCols=0;
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
-    const width = maxCols>0 ? (stepX*(maxCols-1) + charW) : 0; // sin spacing al final
+    const width  = maxCols>0 ? (stepX*(maxCols-1) + charW) : 0; // sin spacing al final
     const height = rows*stepY;
     return {charW,stepX,stepY,width,height};
   }
@@ -130,12 +142,11 @@
     ctx.textBaseline='top';
 
     const {charW,stepX,stepY,width,height}=measure(fontPx);
-    const left = (cssW - width)/2;
-    const top  = (cssH - height)/2;
+    const left = Math.floor((cssW - width)/2);
+    const top  = Math.floor((cssH - height)/2);
 
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
-      // dibujar caracter por caracter para respetar letter-spacing negativo
       for(let x=0;x<line.length;x++){
         const ch=line[x];
         const px = left + x*stepX;
@@ -148,8 +159,10 @@
   function fitAndRender(){
     if(!lines.length){ ctx.clearRect(0,0,canvas.width,canvas.height); return }
     setCanvasSize();
-    const availW=stage.clientWidth;
-    const availH=stage.clientHeight;
+
+    // área disponible estrictamente menor que el rectángulo visual
+    const availW=Math.max(1, stage.clientWidth  - SAFE_PAD*2);
+    const availH=Math.max(1, stage.clientHeight - SAFE_PAD*2);
 
     let lo=4, hi=640, best=4;
     while(lo<=hi){
@@ -157,8 +170,7 @@
       const m=measure(mid);
       if(m.width<=availW && m.height<=availH){best=mid;lo=mid+1}else{hi=mid-1}
     }
-    // margen anti-subpíxel
-    best=Math.max(4,best-1);
+    best=Math.max(4,best-1); // margen anti-subpíxel
     draw(best);
   }
 
@@ -186,7 +198,6 @@
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
 
-      setCanvasSize();
       fitAndRender();
       showLoaded();
 
@@ -208,6 +219,8 @@
 </script>
 </body>
 </html>
+
+
 
 
 
