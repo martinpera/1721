@@ -11,7 +11,7 @@
     :root{--bg:#f4f2ed;--ink:#171717;--ink-2:#61656f;--line:#e3e1dc;--card:#ffffff;--r:16px;--shadow:0 10px 28px rgba(0,0,0,.07);--max:1100px;--pad:14px;--bar-max:520px;--composer-max:720px;--header-h:60px;--composer-h:0px;--red:#e02424;--black:#000}
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;height:100%;overscroll-behavior:none;touch-action:manipulation}
-    body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;padding-top:var(--header-h);padding-bottom:var(--composer-h);overflow:hidden}
+    body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;padding-top:var(--header-h);padding-bottom:var(--composer-h)}
     .brandBtn img{width:22px;height:22px;object-fit:contain;display:block}
     .legalNote{font-size:.88rem;color:#61656f;margin:4px 0 0;text-align:center}
     .legalNote a{color:inherit;text-decoration:underline}
@@ -66,11 +66,11 @@
     .chip{border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.85rem;background:#fff}
     .attach{border:1px solid var(--line);background:#fff;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer}
     .attach svg{width:20px;height:20px}
-    .attachMenu{position:absolute;left:0;bottom:52px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:6px;display:none;min-width:160px;z-index:60}
+    .attachMenu{position:absolute;left:0;bottom:52px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px;display:none;min-width:220px;z-index:60}
     .attachMenu.open{display:block}
-    .attachItem{width:100%;display:flex;align-items:center;gap:10px;border:none;background:#fff;border-radius:12px;padding:14px 14px;cursor:pointer;font-size:16px;text-align:left;color:#000}
+    .attachItem{width:100%;display:flex;align-items:center;gap:12px;border:none;background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:16px;text-align:left;color:var(--black)}
     .attachItem:hover{background:#f6f6f6}
-    .attachItem svg{width:22px;height:22px;color:#000}
+    .attachItem svg{width:22px;height:22px;stroke:currentColor}
     .modal{position:fixed;inset:var(--header-h) 0 0 0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:150;overscroll-behavior:contain}
     .sheet{width:min(420px,92vw);max-height:88vh;flex-direction:column;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 60px rgba(0,0,0,.2);margin:0 auto}
     .sheet header{position:sticky;top:0;z-index:10;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -88,7 +88,7 @@
     .actionsRow{display:flex;gap:8px}
     .primary{border:none;background:#0a7;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;flex:1}
     .primary[disabled]{opacity:.7;cursor:not-allowed}
-    .ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;color:var(--black)}
     .mutedLink{font-size:.95rem;color:#3b3f46;text-align:center;text-decoration:underline}
     .alert{font-size:.95rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line)}
     .alert.ok{background:#eefbf1;border-color:#b7e4c7;color:#1b5e20}
@@ -103,152 +103,143 @@
     .btnRow{display:flex;gap:8px;flex-wrap:wrap}
     .statline{color:#111}
     .asciiLink{display:inline-flex;align-items:center;justify-content:center;border:none;background:#111;color:#fff;border-radius:12px;padding:8px 12px;font-weight:700;font-size:.95rem;line-height:1;text-decoration:none;cursor:pointer}
-
-    /* X negras y más grandes en todos los modales */
-    .sheet header .ghost{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
-    .sheet header .ghost svg{width:22px;height:22px;color:#000;stroke:currentColor}
-
-    /* Contenedor bloqueado (no refluye al rotar) */
-    #lockRoot{position:fixed;left:0;top:0;transform-origin:top left;will-change:transform;z-index:0}
   </style>
 </head>
 <body>
-  <div id="lockRoot">
-    <header>
-      <div class="top">
-        <button class="brandBtn" title="Inicio" aria-label="Inicio">
-          <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" alt="Abrí los ojos">
+  <header>
+    <div class="top">
+      <button class="brandBtn" title="Inicio" aria-label="Inicio">
+        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" alt="Abrí los ojos">
+      </button>
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="q" placeholder="Buscar..."/>
+      </div>
+      <button class="iconbtn" id="accountBtn" title="Cuenta" aria-haspopup="dialog" aria-controls="accountModal">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 20a8 8 0 0 1 16 0"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="wrap" id="appContent">
+    <main>
+      <section class="feed" id="feed"></section>
+    </main>
+  </div>
+
+  <div class="composer" id="composer">
+    <div class="row">
+      <button class="attach" id="attachBtn" aria-haspopup="menu" aria-expanded="false" title="Adjuntar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
+      <div class="attachMenu" id="attachMenu" role="menu">
+        <button type="button" class="attachItem" data-href="adj.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
+          Subir foto
         </button>
-        <div class="search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="q" placeholder="Buscar..."/>
-        </div>
-        <button class="iconbtn" id="accountBtn" title="Cuenta" aria-haspopup="dialog" aria-controls="accountModal">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="8" r="4"></circle>
-            <path d="M4 20a8 8 0 0 1 16 0"></path>
+        <button type="button" class="attachItem" data-href="cam.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Sacar foto
+        </button>
+      </div>
+      <input type="text" id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)">
+      <button class="send" id="sendBtn">Publicar</button>
+    </div>
+    <div class="preview" id="composePreview"></div>
+  </div>
+
+  <div class="modal" id="accountModal" role="dialog" aria-modal="true" aria-label="Entrar">
+    <div class="sheet auth">
+      <header>
+        <h2>Entrar</h2>
+        <button class="ghost" id="closeAccount" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
-      </div>
-    </header>
-
-    <div class="wrap" id="appContent">
-      <main>
-        <section class="feed" id="feed"></section>
-      </main>
+      </header>
+      <form class="body" id="loginForm" action="/api/login" method="POST" autocomplete="on">
+        <div id="loginMsg" class="alert" style="display:none"></div>
+        <div class="field">
+          <label for="lnombre">Usuario</label>
+          <input id="lnombre" name="nombre" type="text" placeholder="tu usuario" required>
+        </div>
+        <div class="field passwrap">
+          <label for="password">Contraseña</label>
+          <div class="control">
+            <input id="password" name="password" type="password" placeholder="••••••••" required>
+            <button type="button" class="togglePwd" id="togglePwd" aria-pressed="false">Mostrar</button>
+          </div>
+        </div>
+        <div class="actionsRow">
+          <button class="primary" id="loginSubmit" type="submit">Iniciar sesión</button>
+          <button class="ghost" type="button" id="openSignupBtn">Crear cuenta</button>
+        </div>
+        <a class="mutedLink" href="que.html">Qué es esto</a>
+        <p class="legalNote">Al usar esta plataforma aceptás los <a href="tyc.html" target="_blank" rel="noopener noreferrer">Términos y Condiciones de uso</a>.</p>
+      </form>
     </div>
+  </div>
 
-    <div class="composer" id="composer">
-      <div class="row">
-        <button class="attach" id="attachBtn" aria-haspopup="menu" aria-expanded="false" title="Adjuntar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
+  <div class="modal" id="signupModal" role="dialog" aria-modal="true" aria-label="Crear cuenta">
+    <div class="sheet auth">
+      <header>
+        <h2>Crear cuenta</h2>
+        <button class="ghost" id="closeSignup" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
-        <div class="attachMenu" id="attachMenu" role="menu">
-          <button type="button" class="attachItem" data-href="adj.html">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
-            Subir foto
-          </button>
-          <button type="button" class="attachItem" data-href="cam.html">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Sacar foto
-          </button>
+      </header>
+      <form class="body" id="signupForm" action="/api/crear" method="POST" autocomplete="on">
+        <div id="signupMsg" class="alert" style="display:none"></div>
+        <div class="field">
+          <label for="snombre">Usuario</label>
+          <input id="snombre" name="nombre" type="text" placeholder="tu usuario" required>
         </div>
-        <input type="text" id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)">
-        <button class="send" id="sendBtn">Publicar</button>
-      </div>
-      <div class="preview" id="composePreview"></div>
+        <div class="field passwrap">
+          <label for="spassword">Contraseña</label>
+          <div class="control">
+            <input id="spassword" name="password" type="password" placeholder="••••••••" required>
+            <button type="button" class="togglePwd" id="togglePwdSignup" aria-pressed="false">Mostrar</button>
+          </div>
+        </div>
+        <div class="actionsRow">
+          <button class="primary" id="signupSubmit" type="submit">Crear</button>
+          <button class="ghost" type="button" id="openLoginBtn">Ya tengo cuenta</button>
+        </div>
+        <a class="mutedLink" href="que.html">Qué es esto</a>
+        <p class="legalNote">Al usar esta plataforma aceptás los <a href="tyc.html" target="_blank" rel="noopener noreferrer">Términos y Condiciones de uso</a>.</p>
+      </form>
     </div>
+  </div>
 
-    <div class="modal" id="accountModal" role="dialog" aria-modal="true" aria-label="Entrar">
-      <div class="sheet auth">
-        <header>
-          <h2>Entrar</h2>
-          <button class="ghost" id="closeAccount" aria-label="Cerrar">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </header>
-        <form class="body" id="loginForm" action="/api/login" method="POST" autocomplete="on">
-          <div id="loginMsg" class="alert" style="display:none"></div>
-          <div class="field">
-            <label for="lnombre">Usuario</label>
-            <input id="lnombre" name="nombre" type="text" placeholder="tu usuario" required>
-          </div>
-          <div class="field passwrap">
-            <label for="password">Contraseña</label>
-            <div class="control">
-              <input id="password" name="password" type="password" placeholder="••••••••" required>
-              <button type="button" class="togglePwd" id="togglePwd" aria-pressed="false">Mostrar</button>
-            </div>
-          </div>
-          <div class="actionsRow">
-            <button class="primary" id="loginSubmit" type="submit">Iniciar sesión</button>
-            <button class="ghost" type="button" id="openSignupBtn">Crear cuenta</button>
-          </div>
-          <a class="mutedLink" href="que.html">Qué es esto</a>
-          <p class="legalNote">Al usar esta plataforma aceptás los <a href="tyc.html" target="_blank" rel="noopener noreferrer">Términos y Condiciones de uso</a>.</p>
-        </form>
-      </div>
-    </div>
-
-    <div class="modal" id="signupModal" role="dialog" aria-modal="true" aria-label="Crear cuenta">
-      <div class="sheet auth">
-        <header>
-          <h2>Crear cuenta</h2>
-          <button class="ghost" id="closeSignup" aria-label="Cerrar">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </header>
-        <form class="body" id="signupForm" action="/api/crear" method="POST" autocomplete="on">
-          <div id="signupMsg" class="alert" style="display:none"></div>
-          <div class="field">
-            <label for="snombre">Usuario</label>
-            <input id="snombre" name="nombre" type="text" placeholder="tu usuario" required>
-          </div>
-          <div class="field passwrap">
-            <label for="spassword">Contraseña</label>
-            <div class="control">
-              <input id="spassword" name="password" type="password" placeholder="••••••••" required>
-              <button type="button" class="togglePwd" id="togglePwdSignup" aria-pressed="false">Mostrar</button>
-            </div>
-          </div>
-          <div class="actionsRow">
-            <button class="primary" id="signupSubmit" type="submit">Crear</button>
-            <button class="ghost" type="button" id="openLoginBtn">Ya tengo cuenta</button>
-          </div>
-          <a class="mutedLink" href="que.html">Qué es esto</a>
-          <p class="legalNote">Al usar esta plataforma aceptás los <a href="tyc.html" target="_blank" rel="noopener noreferrer">Términos y Condiciones de uso</a>.</p>
-        </form>
-      </div>
-    </div>
-
-    <div class="modal" id="profileModal" role="dialog" aria-modal="true" aria-label="Cuenta">
-      <div class="sheet account">
-        <header>
-          <h2>Tu cuenta</h2>
-          <button class="ghost" id="closeProfile" aria-label="Cerrar">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </header>
-        <div class="body profileRow">
-          <div class="statline" id="accountLine">cuenta: @—</div>
-          <div class="statline" id="ageLine">antigüedad: —</div>
-          <div class="statline" id="postsLine">posts: —</div>
-          <div class="btnRow">
-            <button class="primary danger" id="logoutBtn">Cerrar sesión</button>
-            <a class="primary dark" href="que.html">Qué es esto</a>
-          </div>
+  <div class="modal" id="profileModal" role="dialog" aria-modal="true" aria-label="Cuenta">
+    <div class="sheet account">
+      <header>
+        <h2>Tu cuenta</h2>
+        <button class="ghost" id="closeProfile" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+      <div class="body profileRow">
+        <div class="statline" id="accountLine">cuenta: @—</div>
+        <div class="statline" id="ageLine">antigüedad: —</div>
+        <div class="statline" id="postsLine">posts: —</div>
+        <div class="btnRow">
+          <button class="primary danger" id="logoutBtn">Cerrar sesión</button>
+          <a class="primary dark" href="que.html">Qué es esto</a>
         </div>
       </div>
     </div>
@@ -264,43 +255,15 @@
   const POST_ENDPOINT='/api/post';
   const DELETE_ENDPOINT='/api/delete';
   let IS_EDITING=false;
-
-  /* ====== BLOQUEO DE ORIENTACIÓN (congelar layout y escalar) ====== */
-  let __LOCK_W=0,__LOCK_H=0;
-  const lockRoot=document.getElementById('lockRoot');
-  function applyLockScale(){
-    const w=window.innerWidth||document.documentElement.clientWidth;
-    const h=window.innerHeight||document.documentElement.clientHeight;
-    const s=Math.min(w/__LOCK_W, h/__LOCK_H);
-    lockRoot.style.width=__LOCK_W+'px';
-    lockRoot.style.height=__LOCK_H+'px';
-    lockRoot.style.transform='scale('+s+')';
-    lockRoot.style.left=((w-__LOCK_W*s)/2)+'px';
-    lockRoot.style.top=((h-__LOCK_H*s)/2)+'px';
-  }
-  function freezeVwElements(){
-    const search=$('.search');
-    if(search){ const cw=getComputedStyle(search).width; search.style.width=cw }
-  }
-  function initLock(){
-    __LOCK_W=window.innerWidth||document.documentElement.clientWidth;
-    __LOCK_H=window.innerHeight||document.documentElement.clientHeight;
-    window.__ORIENT_LOCK__=true;
-    freezeVwElements();
-    applyLockScale();
-  }
-  window.addEventListener('resize',()=>{ if(window.__ORIENT_LOCK__){ applyLockScale(); }});
-  window.addEventListener('orientationchange',()=>{ setTimeout(applyLockScale,60) });
-
   function pad(n){return n<10?'0'+n:''+n}
   function fmtShort(ts){const d=new Date(ts);const dd=pad(d.getDate());const mm=pad(d.getMonth()+1);const yy=pad(d.getFullYear()%100);const hh=pad(d.getHours());const mi=pad(d.getMinutes());const ss=pad(d.getSeconds());return`${dd}/${mm}/${yy} (${hh}:${mi}:${ss})`}
   function fmtShortNoYear(ts){const d=new Date(ts);const dd=pad(d.getDate());const mm=pad(d.getMonth()+1);const hh=pad(d.getHours());const mi=pad(d.getMinutes());const ss=pad(d.getSeconds());return`${dd}/${mm} (${hh}:${mi}:${ss})`}
   function fmtDate(ts){return fmtShort(ts)}
-  function setHeaderHeightVar(){if(window.__ORIENT_LOCK__)return;const h=document.querySelector('header')?.offsetHeight||60;document.documentElement.style.setProperty('--header-h',h+'px')}
-  function setComposerHeightVar(){if(window.__ORIENT_LOCK__)return;const c=$('#composer');const h=c?c.offsetHeight:0;document.documentElement.style.setProperty('--composer-h',(h+12)+'px')}
-  window.addEventListener('load',()=>{setHeaderHeightVar();setComposerHeightVar();initLock()});
-  window.addEventListener('resize',()=>{if(!window.__ORIENT_LOCK__){setHeaderHeightVar();setComposerHeightVar()}}); 
-  if(window.visualViewport){visualViewport.addEventListener('resize',()=>{if(!window.__ORIENT_LOCK__){setComposerHeightVar()}})}
+  function setHeaderHeightVar(){const h=document.querySelector('header')?.offsetHeight||60;document.documentElement.style.setProperty('--header-h',h+'px')}
+  function setComposerHeightVar(){const c=$('#composer');const h=c?c.offsetHeight:0;document.documentElement.style.setProperty('--composer-h',(h+12)+'px')}
+  window.addEventListener('load',()=>{setHeaderHeightVar();setComposerHeightVar()});
+  window.addEventListener('resize',()=>{setHeaderHeightVar();setComposerHeightVar()});
+  if(window.visualViewport){visualViewport.addEventListener('resize',setComposerHeightVar)}
   let feed=[];
   let likesByPost={};
   let dislikesByPost={};
@@ -329,11 +292,7 @@
   async function ensureServerId(p){if(!p)return null;if(p._server)return p.id;await loadRemote();const candidate=feed.slice().reverse().find(x=>x.user===p.user&&x.text===p.text);return candidate?candidate.id:(p.id??null)}
   function extractTagsAndClean(raw){const tags=[];const re=/(^|\s)#([\p{L}\p{N}_-]+)/gu;let m,used=new Set;while((m=re.exec(raw))!==null){const tag='#'+m[2].toLowerCase();if(!used.has(tag)){tags.push(tag);used.add(tag)}}const clean=raw.replace(re,(full,sp)=>sp?sp:'').replace(/\s{2,}/g,' ').trim();return{clean,tags}}
   function extractFotoToken(text){const re=/\bf\((\d+)\)/i;const m=/\bf\((\d+)\)/i.exec(String(text||''));if(!m)return{fotoId:null,textNoFoto:String(text||'')};const id=Number(m[1]);const textNoFoto=String(text||'').replace(re,'').replace(/\s{2,}/g,' ').trim();return{fotoId:isFinite(id)?id:null,textNoFoto}}
-  async function loadRemote(){try{const r=await fetch('/api/obtain');const data=await r.json();if(r.ok&&data.ok){const rows=data.posts||[];const tmpLikes={};const tmpDislikes={};const posts=[];rows.forEach(row=>{const raw=String(row.text||'').trim();const likeM=/^\s*l\((\d+)\)\s*$/i.exec(raw);if(likeM){const pid=Number(likeM[1]);const uname=row.user||'anon';const likeId=row.id||genId();(tmpLikes[pid] ||= {total:0,byUser:{}});if(!tmpLikes[pid].byUser[uname]){tmpLikes[pid].byUser[uname]=likeId;tmpLikes[pid].total++}return}
-        const dislikeM=/^\s*d\((\d+)\)\s*$/i.exec(raw);if(dislikeM){const pid=Number(dislikeM[1]);const uname=row.user||'anon';const dislikeId=row.id||genId();(tmpDislikes[pid] ||= {total:0,byUser:{}});if(!tmpDislikes[pid].byUser[uname]){tmpDislikes[pid].byUser[uname]=dislikeId;tmpDislikes[pid].total++}return}
-        const fotoParsed=extractFotoToken(raw);const rawWithoutFoto=fotoParsed.textNoFoto;const {rootId}=parseReplyPrefix(raw);const textForUi=visibleText(rawWithoutFoto);const{clean,tags}=extractTagsAndClean(textForUi);
-        posts.push({id:row.id||genId(),ts:row.created_at?Date.parse(row.created_at):Date.now(),text:clean,tags,media:[],parent:rootId??null,user:row.user||'anon',fotoId:fotoParsed.fotoId,_server:true})});
-        feed=posts;likesByPost=tmpLikes;dislikesByPost=tmpDislikes;persist();persistLikes();persistDislikes();if(!IS_EDITING)filterAndRender()}else{feed=JSON.parse(localStorage.getItem(FEED_KEY)||'[]');loadLikesFromLocal();loadDislikesFromLocal();if(!IS_EDITING)filterAndRender()}}catch{feed=JSON.parse(localStorage.getItem(FEED_KEY)||'[]');loadLikesFromLocal();loadDislikesFromLocal();if(!IS_EDITING)filterAndRender()}}
+  async function loadRemote(){try{const r=await fetch('/api/obtain');const data=await r.json();if(r.ok&&data.ok){const rows=data.posts||[];const tmpLikes={};const tmpDislikes={};const posts=[];rows.forEach(row=>{const raw=String(row.text||'').trim();const likeM=/^\s*l\((\d+)\)\s*$/i.exec(raw);if(likeM){const pid=Number(likeM[1]);const uname=row.user||'anon';const likeId=row.id||genId();(tmpLikes[pid] ||= {total:0,byUser:{}});if(!tmpLikes[pid].byUser[uname]){tmpLikes[pid].byUser[uname]=likeId;tmpLikes[pid].total++}return}const dislikeM=/^\s*d\((\d+)\)\s*$/i.exec(raw);if(dislikeM){const pid=Number(dislikeM[1]);const uname=row.user||'anon';const dislikeId=row.id||genId();(tmpDislikes[pid] ||= {total:0,byUser:{}});if(!tmpDislikes[pid].byUser[uname]){tmpDislikes[pid].byUser[uname]=dislikeId;tmpDislikes[pid].total++}return}const fotoParsed=extractFotoToken(raw);const rawWithoutFoto=fotoParsed.textNoFoto;const {rootId}=parseReplyPrefix(raw);const textForUi=visibleText(rawWithoutFoto);const{clean,tags}=extractTagsAndClean(textForUi);posts.push({id:row.id||genId(),ts:row.created_at?Date.parse(row.created_at):Date.now(),text:clean,tags,media:[],parent:rootId??null,user:row.user||'anon',fotoId:fotoParsed.fotoId,_server:true})});feed=posts;likesByPost=tmpLikes;dislikesByPost=tmpDislikes;persist();persistLikes();persistDislikes();if(!IS_EDITING)filterAndRender()}else{feed=JSON.parse(localStorage.getItem(FEED_KEY)||'[]');loadLikesFromLocal();loadDislikesFromLocal();if(!IS_EDITING)filterAndRender()}}catch{feed=JSON.parse(localStorage.getItem(FEED_KEY)||'[]');loadLikesFromLocal();loadDislikesFromLocal();if(!IS_EDITING)filterAndRender()}}
   setInterval(loadRemote,10000);
   function indexReplies(items){const byParent={};items.forEach(p=>{const pid=p.parent||null;(byParent[pid] ||= []).push(p)});Object.values(byParent).forEach(arr=>arr.sort((a,b)=>a.ts-b.ts));return byParent}
   function authorNode(user){if(String(user||'').toLowerCase()==='anon'){const span=document.createElement('span');span.className='anonBadge';span.textContent='@anon';return span}else{const span=document.createElement('span');span.className='author';span.textContent='@'+user;return span}}
@@ -408,8 +367,8 @@
   document.addEventListener('click',e=>{const link=e.target.closest('.text a');if(!link)return;if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button===1)return;const href=link.getAttribute('href');if(!href)return;try{const absUrl=new URL(href,location.href).href;const payload={url:absUrl,exp:Date.now()+60000};localStorage.setItem('temp_url',JSON.stringify(payload))}catch{}e.preventDefault();location.href='templocalurl.html'});
   (function(){try{const raw=localStorage.getItem('temp_url');if(!raw)return;const obj=JSON.parse(raw);if(!obj||!obj.exp||Date.now()>obj.exp){localStorage.removeItem('temp_url')}}catch{}})();
   setHeaderHeightVar();setComposerHeightVar();loadRemote();
-  window.addEventListener('resize',()=>{if(!window.__ORIENT_LOCK__){setHeaderHeightVar();setComposerHeightVar()}}); 
-  if(window.visualViewport){visualViewport.addEventListener('resize',()=>{if(!window.__ORIENT_LOCK__){setComposerHeightVar()}})}
+  window.addEventListener('resize',()=>{setHeaderHeightVar();setComposerHeightVar()});
+  if(window.visualViewport){visualViewport.addEventListener('resize',setComposerHeightVar)}
   const attachBtn=$('#attachBtn');
   const attachMenu=$('#attachMenu');
   attachBtn.addEventListener('click',e=>{e.stopPropagation();const isOpen=attachMenu.classList.contains('open');attachMenu.classList.toggle('open',!isOpen);attachBtn.setAttribute('aria-expanded',String(!isOpen))});
