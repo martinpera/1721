@@ -2,36 +2,20 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <title>Visor</title>
 <link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
   :root{--bg:#000;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
-
-  header.top{
-    position:fixed;z-index:10;top:0;left:0;right:0;height:56px;
-    display:grid;grid-template-columns:44px 1fr auto;align-items:center;
-    gap:8px;padding:0 10px;border-bottom:1px solid var(--line);background:#000
-  }
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;touch-action:manipulation}
+  header.top{position:fixed;z-index:10;top:0;left:0;right:0;height:56px;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);background:#000}
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;min-width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 10px}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  .stage{
-    position:fixed;z-index:1;
-    top:calc(var(--header-h) + 8px);
-    left:8px; right:8px; bottom:8px;
-    display:grid;place-items:center;overflow:hidden;background:#000;
-  }
+  .stage{position:fixed;z-index:1;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;overflow:hidden;background:#000}
   canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease}
-  .loading{
-    position:fixed;z-index:2;
-    top:calc(var(--header-h) + 8px);
-    left:8px; right:8px; bottom:8px;
-    display:grid;place-items:center;background:#000
-  }
+  .loading{position:fixed;z-index:2;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;background:#000}
   .hidden{display:none}
 </style>
 </head>
@@ -69,24 +53,20 @@
   const backBtn=document.getElementById('backBtn');
   const blurBtn=document.getElementById('blurBtn');
 
-  const MAX_SIDE = 8192;
-  const MAX_AREA = 16777216;
-  const SAFE_PAD = 2;
-  const LETTER_SPACING_EM = -0.06;
-  const BASE_FONT_PX_DEFAULT = 16;
-  const MIN_FONT_PX = 6;
-  const MAX_DPR = (/(iPhone|iPad)/i.test(navigator.userAgent)) ? 2 : 3;
+  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
+  const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
+  const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
+  const TARGET_STRETCH=IS_MOBILE?1.60:1.40;
 
-  function readMul(){
-    const qs = new URLSearchParams(location.search);
-    const x = parseFloat(qs.get('mul'));
-    if(!isNaN(x)) return x;
-    const ls = parseFloat(localStorage.getItem('ascii_stretch_mul'));
-    if(!isNaN(ls)) return ls;
-    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent) || Math.min(innerWidth, innerHeight) <= 820;
-    return isMobile ? 1.02 : 1.00; // toque mínimo
+  let lines=[], content=null;
+
+  function blockZoom(){
+    ['gesturestart','gesturechange','gestureend','dblclick'].forEach(evt=>{
+      document.addEventListener(evt,e=>{e.preventDefault()},{passive:false});
+    });
+    document.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey)e.preventDefault()},{passive:false});
   }
-  let STRETCH_MUL = readMul();
+  blockZoom();
 
   function setHeaderH(){
     const h=(document.querySelector('header.top')?.offsetHeight||56);
@@ -94,17 +74,8 @@
   }
   setHeaderH();
 
-  let lines=[], content=null, baseStretch=0.55;
-
   function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
-
-  function readTemp(){
-    try{
-      const raw=localStorage.getItem('temp_foto'); if(!raw) return null;
-      const obj=JSON.parse(raw); if(obj&&obj.exp&&Date.now()>obj.exp) return null;
-      return obj;
-    }catch{return null}
-  }
+  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
   async function fetchFoto(id){
     const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});
     if(!r.ok)throw new Error('No se pudo obtener la imagen');
@@ -112,21 +83,21 @@
   }
   function parseWithMarkers(s){
     const out=[], re=/X\*{5}([\s\S]*?)\*{5}X/g; let m, any=false;
-    while((m=re.exec(s))!==null){ any=true; out.push(m[1]) }
-    if(any) return out;
+    while((m=re.exec(s))!==null){any=true;out.push(m[1])}
+    if(any)return out;
     return String(s).replace(/\r\n/g,'\n').split('\n');
   }
   function trimVertical(src){
     let a=0,b=src.length-1;
-    while(a<=b && /^\s*$/.test(src[a])) a++;
-    while(b>=a && /^\s*$/.test(src[b])) b--;
+    while(a<=b&&/^\s*$/.test(src[a]))a++;
+    while(b>=a&&/^\s*$/.test(src[b]))b--;
     return src.slice(a,b+1);
   }
   function stageSize(){
     const headerH=(document.querySelector('header.top')?.offsetHeight||56);
-    const cw = Math.max(1, innerWidth - 16);
-    const ch = Math.max(1, innerHeight - headerH - 16);
-    return {cw, ch};
+    const cw=Math.max(1,innerWidth-16);
+    const ch=Math.max(1,innerHeight-headerH-16);
+    return {cw,ch};
   }
 
   function measureAt(fontPx){
@@ -134,86 +105,72 @@
     ctx.textBaseline='top';
     const cw=ctx.measureText('M').width||fontPx*0.6;
 
-    // altura de línea basada en el ancho real del carácter (+ letter-spacing), así no se “estira”
-    baseStretch = Math.max(0.45, Math.min(1.2, (cw/fontPx) + LETTER_SPACING_EM));
-    const dynStretch = baseStretch * STRETCH_MUL;
-
-    const stepX=Math.max(0.1, cw + LETTER_SPACING_EM*fontPx);
-    const stepY=Math.max(1, fontPx*dynStretch);
+    const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);
+    const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);
 
     const rows=lines.length;
-    let maxCols=0;
-    for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
-    const w = maxCols>0 ? (stepX*(maxCols-1)+cw) : 1;
-    const h = Math.max(1, rows*stepY);
-    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx,dynStretch};
+    let maxCols=0; for(const ln of lines){if(ln.length>maxCols)maxCols=ln.length}
+    const w=maxCols>0?(stepX*(maxCols-1)+cw):1;
+    const h=Math.max(1,rows*stepY);
+    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx};
   }
 
   function pickSafeFontPx(startPx){
-    let px = Math.max(MIN_FONT_PX, startPx|0);
-    let dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
+    let px=Math.max(MIN_FONT_PX,startPx|0);
+    let dpr=Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1));
     for(let i=0;i<40;i++){
-      const m = measureAt(px);
-      const W = Math.ceil(m.w * dpr);
-      const H = Math.ceil(m.h * dpr);
-      const area = W*H;
-      if(W <= MAX_SIDE && H <= MAX_SIDE && area <= MAX_AREA){
-        return {px, dpr, metrics:m};
-      }
-      px = Math.max(MIN_FONT_PX, Math.floor(px*0.9));
+      const m=measureAt(px);
+      const W=Math.ceil(m.w*dpr), H=Math.ceil(m.h*dpr), area=W*H;
+      if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,metrics:m};
+      px=Math.max(MIN_FONT_PX,Math.floor(px*0.9));
     }
-    return {px:MIN_FONT_PX, dpr:Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1)), metrics:measureAt(MIN_FONT_PX)};
+    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1)),metrics:measureAt(MIN_FONT_PX)};
   }
 
   function renderIntrinsic(){
-    const pick = pickSafeFontPx(BASE_FONT_PX_DEFAULT);
-    const dpr = pick.dpr;
-    content = pick.metrics;
+    const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT);
+    const dpr=pick.dpr;
+    content=pick.metrics;
 
-    const W = Math.max(1, Math.ceil(content.w*dpr));
-    const H = Math.max(1, Math.ceil(content.h*dpr));
-    canvas.width  = W;
-    canvas.height = H;
+    const W=Math.max(1,Math.ceil(content.w*dpr));
+    const H=Math.max(1,Math.ceil(content.h*dpr));
+    canvas.width=W; canvas.height=H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
 
-    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim() || '#eaeaea';
+    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
     ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
 
-    const stepX = content.stepX;
-    const stepY = content.stepY;
-
+    const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
-      const line=lines[y];
-      const py = Math.round(y*stepY);
+      const line=lines[y]; const py=Math.round(y*stepY);
       for(let x=0;x<line.length;x++){
-        const px = Math.round(x*stepX);
-        ctx.fillText(line[x], px, py);
+        const px=Math.round(x*stepX);
+        ctx.fillText(line[x],px,py);
       }
     }
 
-    canvas.style.width = Math.ceil(content.w)+'px';
-    canvas.style.height= Math.ceil(content.h)+'px';
-
+    canvas.style.width=Math.ceil(content.w)+'px';
+    canvas.style.height=Math.ceil(content.h)+'px';
     applyShrinkScale();
   }
 
   function applyShrinkScale(){
-    if(!content) return;
-    const {cw, ch} = stageSize();
-    const availW = Math.max(1, cw - SAFE_PAD*2);
-    const availH = Math.max(1, ch - SAFE_PAD*2);
-    const scale = Math.min(1, availW/content.w, availH/content.h);
-    canvas.style.width  = Math.floor(content.w * scale) + 'px';
-    canvas.style.height = Math.floor(content.h * scale) + 'px';
+    if(!content)return;
+    const {cw,ch}=stageSize();
+    const availW=Math.max(1,cw- SAFE_PAD*2);
+    const availH=Math.max(1,ch- SAFE_PAD*2);
+    const scale=Math.min(1, availW/content.w, availH/content.h);
+    canvas.style.width=Math.floor(content.w*scale)+'px';
+    canvas.style.height=Math.floor(content.h*scale)+'px';
   }
 
   function handleViewportChange(){
     setHeaderH();
-    applyShrinkScale(); // no re-render para que el zoom sea estable
+    applyShrinkScale(); 
   }
 
   function showLoaded(){loading.classList.add('hidden')}
@@ -240,10 +197,8 @@
       showLoaded();
 
       addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
-      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange), 140));
-      if(window.visualViewport){
-        visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
-      }
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));
+      if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange))}
     }catch(e){
       headerMeta.textContent='Error';
       showError('No se pudo cargar');
@@ -251,20 +206,19 @@
   }
 
   backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
-
   blurBtn.onclick=()=>{
-    const on = blurBtn.getAttribute('aria-pressed')==='true' ? false : true;
-    blurBtn.setAttribute('aria-pressed', String(on));
-    blurBtn.classList.toggle('on', on);
-    // suavísimo: parecido a “foto”
-    canvas.style.filter = on ? 'blur(0.6px) contrast(1.02)' : 'none';
+    const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
+    blurBtn.setAttribute('aria-pressed',String(on));
+    blurBtn.classList.toggle('on',on);
+    canvas.style.filter=on?'blur(0.6px) contrast(1.02)':'none';
   };
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
 </html>
+
 
 
 
