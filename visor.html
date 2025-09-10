@@ -210,7 +210,8 @@
     const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
     blurBtn.setAttribute('aria-pressed',String(on));
     blurBtn.classList.toggle('on',on);
-    canvas.style.filter=on?'blur(0.6px) contrast(1.02)':'none';
+    /* más potente + ilumina */
+    canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none';
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
