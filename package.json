@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "engines": { "node": "22.x" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3"
+  }
+}
