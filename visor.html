@@ -4,9 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Visor</title>
-<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
-  :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
+  :root{--bg:#000;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
@@ -23,8 +23,7 @@
     position:fixed;z-index:1;
     top:calc(var(--header-h) + 8px);
     left:8px; right:8px; bottom:8px;
-    display:grid;place-items:center;
-    overflow:hidden;background:#000;
+    display:grid;place-items:center;overflow:hidden;background:#000;
   }
 
   #art{display:block;background:#000}
@@ -69,11 +68,10 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
-  // Ajustes
-  const SAFE_PAD = 2;                 // margen interno para no pegar contra bordes
-  const LETTER_SPACING_EM = -0.06;    // compacidad horizontal
-  const BASE_FONT_PX = 16;            // punto de partida del render intrínseco
-  const MAX_DPR = 3;                  // limita el render para evitar canvases gigantes en iPhone
+  const SAFE_PAD = 2;
+  const LETTER_SPACING_EM = -0.06;
+  const BASE_FONT_PX = 16;
+  const MAX_DPR = 3;
 
   function computeStretch(){
     const qs = new URLSearchParams(location.search);
@@ -82,7 +80,7 @@
     const lsS = parseFloat(localStorage.getItem('ascii_stretch'));
     if(!Number.isNaN(lsS)) return lsS;
     const mobile = (innerWidth < innerHeight) || Math.min(innerWidth, innerHeight) <= 820;
-    return mobile ? 1.35 : 1.25; // más compacto vertical
+    return mobile ? 1.35 : 1.25;
   }
   let STRETCH = computeStretch();
 
@@ -92,12 +90,18 @@
   }
   setHeaderH();
 
-  // Datos
   let lines=[];
   let content=null;
 
-  // Utilidades
-  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
+  function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
+
+  function readTemp(){
+    try{
+      const raw=localStorage.getItem('temp_foto'); if(!raw) return null;
+      const obj=JSON.parse(raw); if(obj&&obj.exp&&Date.now()>obj.exp) return null;
+      return obj;
+    }catch{return null}
+  }
   async function fetchFoto(id){
     const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});
     if(!r.ok)throw new Error('No se pudo obtener la imagen');
@@ -117,7 +121,6 @@
   }
 
   function stageSize(){
-    // A veces clientWidth/Height retorna 0 si todavía no layoutó.
     const cw = stage.clientWidth || Math.max(1, innerWidth - 16);
     const ch = stage.clientHeight|| Math.max(1, innerHeight - (document.querySelector('header.top')?.offsetHeight||56) - 16);
     return {cw, ch};
@@ -139,29 +142,19 @@
 
   function renderIntrinsic(){
     content = measureAt(BASE_FONT_PX);
-
     const dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
     const W = Math.max(1, Math.ceil(content.w*dpr));
     const H = Math.max(1, Math.ceil(content.h*dpr));
-
-    // Seteo físico del canvas
     canvas.width  = W;
     canvas.height = H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
-
-    // Fondo
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
-
-    // Texto
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
     ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
-
     const stepX = content.stepX;
     const stepY = content.stepY;
-
-    // Dibujo "a grilla" para evitar distorsión subpíxel
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
       const py = Math.round(y*stepY);
@@ -170,12 +163,8 @@
         ctx.fillText(line[x], px, py);
       }
     }
-
-    // Tamaño CSS base = intrínseco
     canvas.style.width = Math.ceil(content.w)+'px';
     canvas.style.height= Math.ceil(content.h)+'px';
-
-    // Ajuste de escala para que NUNCA exceda la pantalla ni quede tapado
     applyShrinkScale();
   }
 
@@ -184,13 +173,9 @@
     const {cw, ch} = stageSize();
     const availW = Math.max(1, cw - SAFE_PAD*2);
     const availH = Math.max(1, ch - SAFE_PAD*2);
-
-    // Solo SHRINK (nunca escala > 1) y uniforme para no deformar
     const scale = Math.min(1, availW/content.w, availH/content.h);
-
     const cssW = Math.floor(content.w * scale);
     const cssH = Math.floor(content.h * scale);
-
     canvas.style.width = cssW + 'px';
     canvas.style.height= cssH + 'px';
   }
@@ -200,9 +185,9 @@
     const newS = computeStretch();
     if(newS !== STRETCH){
       STRETCH = newS;
-      renderIntrinsic(); // recalcula grilla con nueva altura de línea
+      renderIntrinsic();
     }else{
-      applyShrinkScale(); // mantiene centrado y sin recortes
+      applyShrinkScale();
     }
   }
 
@@ -217,24 +202,17 @@
     try{
       const tmp=readTemp();
       if(!tmp||!tmp.id){headerMeta.textContent=''; showError('Nada para mostrar'); return}
-
       const f=await fetchFoto(tmp.id);
       const user=f.usuario?('@'+f.usuario):'@anon';
       const fmt=f.codif?String(f.codif):'';
       headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
-
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
-
-      // Esperá un frame para que el layout de header/stage esté listo
-      requestAnimationFrame(()=>{
-        renderIntrinsic();
-        showLoaded();
-      });
-
-      // Listeners de redimensionado/orientación
+      await nextFrame();
+      renderIntrinsic();
+      showLoaded();
       addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
-      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(refitAndRedraw), 120));
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(refitAndRedraw), 140));
       if(window.visualViewport){
         visualViewport.addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
       }
@@ -254,6 +232,7 @@
 </script>
 </body>
 </html>
+
 
 
 
