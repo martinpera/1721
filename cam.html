@@ -153,7 +153,7 @@
 
   sendBtn.onclick=async()=>{
     const user=getUser();
-    if(!user){showToast('Sesión no iniciada. Enviando al index…',true);return}
+    if(!user){showToast('Sesión no iniciada.',true);return}
     if(!asciiText){
       if(video.readyState>=2){asciiText=asciiFrom(video)}else{showToast('No hay imagen capturada.',false);return}
     }
