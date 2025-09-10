@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Visor</title>
-<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
   :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
@@ -68,24 +68,29 @@
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
 
-  // Solo SHRINK, nunca enlarge
-  const SAFE_PAD = 2;                   // margen interno para que no toque bordes
-  const LETTER_SPACING_EM = -0.06;      // emula letter-spacing del ASCII
+  const SAFE_PAD = 2;
+  const LETTER_SPACING_EM = -0.06;
   const BASE_FONT_PX = Number(new URLSearchParams(location.search).get('px')) || 16;
-  const baseStretch = (innerWidth<=768)?1.5:1.5;
-  const STRETCH = parseFloat(new URLSearchParams(location.search).get('stretch'))||
-                  parseFloat(localStorage.getItem('ascii_stretch'))||baseStretch;
+
+  function computeStretch(){
+    const qs = new URLSearchParams(location.search);
+    const fromQS = parseFloat(qs.get('stretch'));
+    if(!Number.isNaN(fromQS)) return fromQS;
+    const fromLS = parseFloat(localStorage.getItem('ascii_stretch'));
+    if(!Number.isNaN(fromLS)) return fromLS;
+    const narrow = Math.min(innerWidth, innerHeight) <= 820 || innerWidth < innerHeight;
+    return narrow ? 1.6 : 1.4;
+  }
+  let STRETCH = computeStretch();
 
   function setHeaderH(){
     const h=(document.querySelector('header.top')?.offsetHeight||56);
     document.documentElement.style.setProperty('--header-h',h+'px');
   }
   setHeaderH();
-  addEventListener('resize',setHeaderH);
-  if(window.visualViewport){visualViewport.addEventListener('resize',setHeaderH)}
 
-  let lines=[];          // arreglo de líneas ASCII
-  let content = null;    // {w,h,charW,stepX,stepY} medido a BASE_FONT_PX
+  let lines=[];
+  let content=null;
 
   function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
   async function fetchFoto(id){
@@ -117,37 +122,38 @@
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
     const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 0;
     const h = rows*stepY;
-    return {w,h,charW,stepX,stepY};
+    return {w,h,charW,stepX,stepY,maxCols,rows};
   }
 
   function renderIntrinsic(){
-    // Medimos a tamaño base (intrínseco)
     content = measureAt(BASE_FONT_PX);
 
-    // Preparamos canvas a resolución de pantalla para nitidez
     const dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
     canvas.width = Math.max(1, Math.ceil(content.w*dpr));
     canvas.height= Math.max(1, Math.ceil(content.h*dpr));
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
-    // Dibujamos ASCII centrado dentro del propio canvas intrínseco
     ctx.fillStyle='#000'; ctx.fillRect(0,0,content.w,content.h);
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea';
     ctx.font=`${BASE_FONT_PX}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
 
+    // Posiciones “snapeadas” para evitar distorsión por subpíxel en iOS
+    const stepX = content.stepX;
+    const stepY = content.stepY;
+
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
+      const py = Math.round(y*stepY);
       for(let x=0;x<line.length;x++){
-        ctx.fillText(line[x], x*content.stepX, y*content.stepY);
+        const px = Math.round(x*stepX);
+        ctx.fillText(line[x], px, py);
       }
     }
 
-    // Seteamos el tamaño CSS INTRÍNSECO (sin escalar todavía)
     canvas.style.width = Math.ceil(content.w)+'px';
     canvas.style.height= Math.ceil(content.h)+'px';
 
-    // Luego ajustamos escala CSS para que entre en el stage sin recortes (solo shrink)
     applyShrinkScale();
   }
 
@@ -155,6 +161,7 @@
     if(!content) return;
     const availW = Math.max(1, stage.clientWidth  - SAFE_PAD*2);
     const availH = Math.max(1, stage.clientHeight - SAFE_PAD*2);
+
     const scale = Math.min(1, availW/content.w, availH/content.h);
 
     const cssW = Math.floor(content.w * scale);
@@ -164,16 +171,22 @@
     canvas.style.height= cssH + 'px';
   }
 
+  function refitAndRedraw(){
+    // Recalcular stretch por si cambió orientación/tamaño
+    const newStretch = computeStretch();
+    if(newStretch !== STRETCH){
+      STRETCH = newStretch;
+      renderIntrinsic();
+    }else{
+      applyShrinkScale();
+    }
+  }
+
   function showLoaded(){loading.classList.add('hidden')}
   function showError(msg){
     lines=[msg||'No se pudo cargar'];
     renderIntrinsic();
     showLoaded();
-  }
-
-  function mkRedraw(){
-    let ticking=false;
-    return ()=>{ if(ticking) return; ticking=true; requestAnimationFrame(()=>{ticking=false; applyShrinkScale()}) };
   }
 
   async function init(){
@@ -191,11 +204,10 @@
       renderIntrinsic();
       showLoaded();
 
-      const redraw=mkRedraw();
-      addEventListener('resize',redraw);
-      addEventListener('orientationchange',()=>setTimeout(redraw,120));
-      if(window.visualViewport){visualViewport.addEventListener('resize',redraw)}
-      const ro=new ResizeObserver(redraw);
+      addEventListener('resize',()=>{setHeaderH(); refitAndRedraw()});
+      addEventListener('orientationchange',()=>setTimeout(()=>{setHeaderH(); refitAndRedraw()},120));
+      if(window.visualViewport){visualViewport.addEventListener('resize',()=>{setHeaderH(); refitAndRedraw()})}
+      const ro=new ResizeObserver(()=>refitAndRedraw());
       ro.observe(stage);
     }catch(e){
       headerMeta.textContent='Error';
@@ -209,6 +221,7 @@
 </script>
 </body>
 </html>
+
 
 
 
