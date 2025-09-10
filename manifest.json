@@ -1,0 +1,23 @@
+{
+  "name": "1721",
+  "short_name": "1721",
+  "description": "1721",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhxOUGUF_2ISdz6t15OQYUhm1BAP5tD-b5F94VnRMBguW5doEWtcu7r7ygaKLkJlXUYPkURedWpiYt4FYOad9gadSSR8d-77VT80nap9zn-kmv1SOwb8p4j-c_11xide12O1f2S8mjee8ynNQlJ77a3ZMqvxhUFIkCaN3dbHIFR88H-IWSMZ8w1BbEmyX2Z/s7559/icon-512.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgKXTtH8gopAYsiz2-JXGN3DAIfcg-eGPJCU-8irI9xWcc4XZVTovqJ1PER2mXyo9f42gLCxpSqKD58LX7FwRJ-xdRB8pN1TEqjR0HS2xpSSycdTMr0vkHETMt4vyJDPjvv4M_ZgF1NhfS5hzdw8KLRX9Wo92mjs5VDxI1gX-0JuNkKrzU3zIs-Mx-_Yn4v/s7559/icon-192.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "lang": "es"
+}
