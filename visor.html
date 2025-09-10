@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Visor</title>
-<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+<link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
   :root{--bg:#000;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
@@ -13,10 +13,10 @@
 
   header.top{
     position:fixed;z-index:10;top:0;left:0;right:0;height:56px;
-    display:grid;grid-template-columns:44px 1fr 44px;align-items:center;
-    padding:0 10px;border-bottom:1px solid var(--line);background:#000
+    display:grid;grid-template-columns:44px 1fr auto;align-items:center;
+    gap:8px;padding:0 10px;border-bottom:1px solid var(--line);background:#000
   }
-  .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;min-width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 10px}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   .stage{
@@ -25,7 +25,7 @@
     left:8px; right:8px; bottom:8px;
     display:grid;place-items:center;overflow:hidden;background:#000;
   }
-  canvas#art{display:block;background:#000;image-rendering:auto}
+  canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease}
   .loading{
     position:fixed;z-index:2;
     top:calc(var(--header-h) + 8px);
@@ -41,7 +41,9 @@
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
     </button>
     <div id="headerMeta" class="title"></div>
-    <div></div>
+    <div style="display:flex;gap:8px">
+      <button id="blurBtn" class="btn" aria-pressed="false">Blur</button>
+    </div>
   </header>
 
   <div class="stage" id="stage">
@@ -65,26 +67,26 @@
   const loading=document.getElementById('loading');
   const headerMeta=document.getElementById('headerMeta');
   const backBtn=document.getElementById('backBtn');
+  const blurBtn=document.getElementById('blurBtn');
 
-  // límites seguros para Safari/iOS (si te pasás, el canvas queda negro)
-  const MAX_SIDE = 8192;                 // px por lado
-  const MAX_AREA = 16777216;             // ~16.7M px
+  const MAX_SIDE = 8192;
+  const MAX_AREA = 16777216;
   const SAFE_PAD = 2;
   const LETTER_SPACING_EM = -0.06;
   const BASE_FONT_PX_DEFAULT = 16;
   const MIN_FONT_PX = 6;
-  const MAX_DPR = navigator.userAgent.includes('iPhone')||navigator.userAgent.includes('iPad') ? 2 : 3;
+  const MAX_DPR = (/(iPhone|iPad)/i.test(navigator.userAgent)) ? 2 : 3;
 
-  function computeStretch(){
+  function readMul(){
     const qs = new URLSearchParams(location.search);
-    const p = parseFloat(qs.get('stretch'));
-    if(!Number.isNaN(p)) return p;
-    const ls = parseFloat(localStorage.getItem('ascii_stretch'));
-    if(!Number.isNaN(ls)) return ls;
+    const x = parseFloat(qs.get('mul'));
+    if(!isNaN(x)) return x;
+    const ls = parseFloat(localStorage.getItem('ascii_stretch_mul'));
+    if(!isNaN(ls)) return ls;
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent) || Math.min(innerWidth, innerHeight) <= 820;
-    return isMobile ? 1.30 : 1.15; // menos "estirado" en desktop
+    return isMobile ? 1.02 : 1.00; // toque mínimo
   }
-  let STRETCH = computeStretch();
+  let STRETCH_MUL = readMul();
 
   function setHeaderH(){
     const h=(document.querySelector('header.top')?.offsetHeight||56);
@@ -92,7 +94,7 @@
   }
   setHeaderH();
 
-  let lines=[], content=null;
+  let lines=[], content=null, baseStretch=0.55;
 
   function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
 
@@ -120,9 +122,7 @@
     while(b>=a && /^\s*$/.test(src[b])) b--;
     return src.slice(a,b+1);
   }
-
   function stageSize(){
-    // no confiamos en clientHeight de Safari; calculamos manual
     const headerH=(document.querySelector('header.top')?.offsetHeight||56);
     const cw = Math.max(1, innerWidth - 16);
     const ch = Math.max(1, innerHeight - headerH - 16);
@@ -132,35 +132,36 @@
   function measureAt(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
-    const charW=ctx.measureText('M').width||fontPx*0.6;
-    const stepX=Math.max(0.1, charW + LETTER_SPACING_EM*fontPx);
-    const stepY=Math.max(1, fontPx*STRETCH);
+    const cw=ctx.measureText('M').width||fontPx*0.6;
+
+    // altura de línea basada en el ancho real del carácter (+ letter-spacing), así no se “estira”
+    baseStretch = Math.max(0.45, Math.min(1.2, (cw/fontPx) + LETTER_SPACING_EM));
+    const dynStretch = baseStretch * STRETCH_MUL;
+
+    const stepX=Math.max(0.1, cw + LETTER_SPACING_EM*fontPx);
+    const stepY=Math.max(1, fontPx*dynStretch);
+
     const rows=lines.length;
     let maxCols=0;
     for(const ln of lines){ if(ln.length>maxCols) maxCols=ln.length }
-    const w = maxCols>0 ? (stepX*(maxCols-1)+charW) : 1;
+    const w = maxCols>0 ? (stepX*(maxCols-1)+cw) : 1;
     const h = Math.max(1, rows*stepY);
-    return {w,h,charW,stepX,stepY,maxCols,rows,fontPx};
+    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx,dynStretch};
   }
 
   function pickSafeFontPx(startPx){
     let px = Math.max(MIN_FONT_PX, startPx|0);
     let dpr = Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1));
-
-    // Si excede límites, bajamos px hasta que entre
     for(let i=0;i<40;i++){
       const m = measureAt(px);
       const W = Math.ceil(m.w * dpr);
       const H = Math.ceil(m.h * dpr);
       const area = W*H;
-
       if(W <= MAX_SIDE && H <= MAX_SIDE && area <= MAX_AREA){
         return {px, dpr, metrics:m};
       }
-      // bajar un poquito y reintentar
       px = Math.max(MIN_FONT_PX, Math.floor(px*0.9));
     }
-    // último recurso
     return {px:MIN_FONT_PX, dpr:Math.max(1, Math.min(MAX_DPR, window.devicePixelRatio||1)), metrics:measureAt(MIN_FONT_PX)};
   }
 
@@ -175,11 +176,9 @@
     canvas.height = H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
-    // fondo
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
 
-    // texto
     ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim() || '#eaeaea';
     ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
@@ -190,14 +189,12 @@
     for(let y=0;y<lines.length;y++){
       const line=lines[y];
       const py = Math.round(y*stepY);
-      // dibujar por carácter (control fino del espaciado)
       for(let x=0;x<line.length;x++){
         const px = Math.round(x*stepX);
         ctx.fillText(line[x], px, py);
       }
     }
 
-    // tamaño CSS intrínseco
     canvas.style.width = Math.ceil(content.w)+'px';
     canvas.style.height= Math.ceil(content.h)+'px';
 
@@ -209,20 +206,14 @@
     const {cw, ch} = stageSize();
     const availW = Math.max(1, cw - SAFE_PAD*2);
     const availH = Math.max(1, ch - SAFE_PAD*2);
-    const scale = Math.min(1, availW/content.w, availH/content.h); // solo shrink, uniforme
+    const scale = Math.min(1, availW/content.w, availH/content.h);
     canvas.style.width  = Math.floor(content.w * scale) + 'px';
     canvas.style.height = Math.floor(content.h * scale) + 'px';
   }
 
-  function refitAndRedraw(){
-    const newS = computeStretch();
+  function handleViewportChange(){
     setHeaderH();
-    if(Math.abs(newS - STRETCH) > 0.001){
-      STRETCH = newS;
-      renderIntrinsic(); // cambia la grilla (altura de línea)
-    }else{
-      applyShrinkScale(); // mantiene escala/centrado sin redibujar
-    }
+    applyShrinkScale(); // no re-render para que el zoom sea estable
   }
 
   function showLoaded(){loading.classList.add('hidden')}
@@ -244,14 +235,14 @@
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
 
-      await nextFrame(); // esperar layout real (iOS)
+      await nextFrame();
       renderIntrinsic();
       showLoaded();
 
-      addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
-      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(refitAndRedraw), 140));
+      addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange), 140));
       if(window.visualViewport){
-        visualViewport.addEventListener('resize', ()=>requestAnimationFrame(refitAndRedraw));
+        visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
       }
     }catch(e){
       headerMeta.textContent='Error';
@@ -260,11 +251,21 @@
   }
 
   backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
+
+  blurBtn.onclick=()=>{
+    const on = blurBtn.getAttribute('aria-pressed')==='true' ? false : true;
+    blurBtn.setAttribute('aria-pressed', String(on));
+    blurBtn.classList.toggle('on', on);
+    // suavísimo: parecido a “foto”
+    canvas.style.filter = on ? 'blur(0.6px) contrast(1.02)' : 'none';
+  };
+
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 </body>
 </html>
+
 
 
 
