@@ -70,7 +70,6 @@
     .attachMenu.open{display:block}
     .attachItem{width:100%;display:flex;align-items:center;gap:12px;border:none;background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:16px;text-align:left;color:var(--black)}
     .attachItem:hover{background:#f6f6f6}
-    .attachItem svg{width:22px;height:22px;stroke:currentColor}
     .modal{position:fixed;inset:var(--header-h) 0 0 0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:150;overscroll-behavior:contain}
     .sheet{width:min(420px,92vw);max-height:88vh;flex-direction:column;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 60px rgba(0,0,0,.2);margin:0 auto}
     .sheet header{position:sticky;top:0;z-index:10;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -96,13 +95,15 @@
     body.modal-open{position:fixed;overflow:hidden;width:100%}
     body.modal-open .composer{pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .15s ease,transform .15s ease}
     @media (min-width:680px){.modal{align-items:center}}
-    @media (max-width:480px){.modal{padding:8px}.sheet{width:calc(100vw - 16px);margin:8px;border-radius:16px;max-height:calc(100vh - var(--header-h) - 16px)}}
+    @media (max-width:480px){.modal{padding:8px}.sheet{width:calc(100vh - 16px);margin:8px;border-radius:16px;max-height:calc(100vh - var(--header-h) - 16px)}}
     .profileRow{display:grid;gap:10px}
     .danger{background:var(--red)!important;color:#fff!important}
     .dark{background:#000!important;color:#fff!important}
     .btnRow{display:flex;gap:8px;flex-wrap:wrap}
     .statline{color:#111}
     .asciiLink{display:inline-flex;align-items:center;justify-content:center;border:none;background:#111;color:#fff;border-radius:12px;padding:8px 12px;font-weight:700;font-size:.95rem;line-height:1;text-decoration:none;cursor:pointer}
+    .toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#111;color:#fff;border:1px solid #000;border-radius:10px;padding:10px 14px;z-index:9999;box-shadow:0 10px 28px rgba(0,0,0,.3);display:none}
+    .toast.show{display:block}
   </style>
 </head>
 <body>
@@ -130,6 +131,7 @@
     </main>
   </div>
 
+  <!-- Composer existente (se mantiene el "+") -->
   <div class="composer" id="composer">
     <div class="row">
       <button class="attach" id="attachBtn" aria-haspopup="menu" aria-expanded="false" title="Adjuntar">
@@ -153,6 +155,8 @@
     </div>
     <div class="preview" id="composePreview"></div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
   <div class="modal" id="accountModal" role="dialog" aria-modal="true" aria-label="Entrar">
     <div class="sheet auth">
@@ -340,11 +344,34 @@
   async function removeDislike(sid){const dislikeId=dislikeRowIdForUser(sid);if(!dislikeId)return false;try{const res=await fetch(DELETE_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:dislikeId,user:userName(),text:`d(${sid})`})});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};if(res.ok&&data.ok){if(dislikesByPost[sid]?.byUser?.[userName()]){delete dislikesByPost[sid].byUser[userName()];dislikesByPost[sid].total=Math.max(0,(dislikesByPost[sid].total||1)-1);if(dislikesByPost[sid].total===0&&Object.keys(dislikesByPost[sid].byUser).length===0){delete dislikesByPost[sid]}persistDislikes();return true}}}catch{}return false}
   function renderCard(post,isReply=false){const el=document.createElement('article');el.className=isReply?'replyCard':'card';const meta=document.createElement('div');meta.className='meta';const dateSpan=document.createElement('span');dateSpan.textContent=fmtDate(post.ts);const idSpan=document.createElement('span');idSpan.className='id';idSpan.textContent='#'+post.id;const tagsWrap=document.createElement('div');tagsWrap.className='tags';(post.tags||[]).forEach(t=>{const b=document.createElement('button');b.className='tagBtn';b.textContent=t;b.onclick=()=>{$('#q').value=t;filterAndRender();window.scrollTo({top:0,behavior:'smooth'})};tagsWrap.appendChild(b)});meta.appendChild(dateSpan);meta.appendChild(document.createTextNode(' · '));meta.appendChild(authorNode(post.user));meta.appendChild(document.createTextNode(' · '));meta.appendChild(idSpan);if((post.tags||[]).length){meta.appendChild(document.createTextNode(' · '));meta.appendChild(tagsWrap)}const fotoIdFromPost=post.fotoId;let fotoId=fotoIdFromPost;if(!fotoId){const parsed=extractFotoToken(post.text||'');fotoId=parsed.fotoId}if(fotoId){const btnView=document.createElement('button');btnView.className='asciiLink';btnView.type='button';btnView.textContent='Ver foto ASCII';btnView.onclick=()=>{try{const payload={id:fotoId,exp:Date.now()+60000};localStorage.setItem('temp_foto',JSON.stringify(payload))}catch{}location.href='visor.html'};el.appendChild(meta);el.appendChild(btnView)}else{el.appendChild(meta)}const txt=document.createElement('div');txt.className='text';const displayText=(post.text||'');txt.innerHTML=linkify(displayText);const actions=document.createElement('div');actions.className='actions';const btnReply=document.createElement('button');btnReply.className='pill reply';btnReply.innerHTML=`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-5-5 5-5"/><path d="M4 9h10a7 7 0 1 1 0 14H7"/></svg> Responder`;const btnLike=document.createElement('button');btnLike.className='pill like';const showId=post.id;btnLike.innerHTML=`${likeSvg()}<span class="count">${likesTotalFor(showId)}</span>`;if(isLogged()&&userLiked(showId))btnLike.classList.add('on');const btnDislike=document.createElement('button');btnDislike.className='pill dislike';btnDislike.innerHTML=`${dislikeSvg()}<span class="count">${dislikesTotalFor(showId)}</span>`;if(isLogged()&&userDisliked(showId))btnDislike.classList.add('on');el.appendChild(txt);el.appendChild(actions);actions.appendChild(btnReply);actions.appendChild(btnLike);actions.appendChild(btnDislike);btnReply.onclick=()=>{if(!isLogged()){openModal(accountModal);$('#lnombre')?.focus();return}if(el.querySelector('.replybox'))return;const box=document.createElement('div');box.className='replybox';const targetUser=post.user||'anon';const tsLabel=isReply?fmtShortNoYear(post.ts):null;const prefix=isReply?`@${targetUser} ${tsLabel}: `:'';box.innerHTML=`${prefix?`<div class="prefixLabel">${prefix}</div>`:''}<textarea placeholder="${prefix?'Escribí tu respuesta…':'Escribí una respuesta…'}"></textarea><div class="row"><button class="btn-ghost cancel">Cancelar</button><button class="btn-primary send">Enviar</button></div>`;el.appendChild(box);const ta=box.querySelector('textarea');IS_EDITING=true;box.querySelector('.cancel').onclick=()=>{IS_EDITING=false;box.remove()};box.querySelector('.send').onclick=async()=>{const body=ta.value.trim();if(!body)return;let rootId=getRootIdFor(post);let rootPost=(post.parent?feed.find(x=>x.id===post.parent):post)||post;rootId=await ensureServerId(rootPost);if(!rootId){IS_EDITING=false;box.remove();return}const finalText=(prefix||'')+body;const reply={id:genId(),ts:Date.now(),text:finalText,tags:[],media:[],user:userName(),parent:rootId,_server:false};feed.push(reply);persist();IS_EDITING=false;filterAndRender();const serverText=`r(${rootId})`+finalText;fetch(POST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'create',text:serverText,user:userName()})}).catch(()=>{});box.remove()}};btnLike.onclick=async()=>{if(!isLogged()){openModal(accountModal);$('#lnombre')?.focus();return}btnLike.disabled=true;btnDislike.disabled=true;const sid=await ensureServerId(post);if(!sid){btnLike.disabled=false;btnDislike.disabled=false;return}const didLike=userLiked(sid);if(!didLike){if(userDisliked(sid)){await removeDislike(sid)}const payloadText=`l(${sid})`;try{const res=await fetch(POST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'create',text:payloadText,user:userName()})});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};if(res.ok&&data.ok&&data.post&&data.post.id){(likesByPost[sid] ||= {total:0,byUser:{}});if(!likesByPost[sid].byUser[userName()]){likesByPost[sid].total++}likesByPost[sid].byUser[userName()]=data.post.id;persistLikes()}}catch{}}else{await removeLike(sid)}filterAndRender();btnLike.disabled=false;btnDislike.disabled=false};btnDislike.onclick=async()=>{if(!isLogged()){openModal(accountModal);$('#lnombre')?.focus();return}btnDislike.disabled=true;btnLike.disabled=true;const sid=await ensureServerId(post);if(!sid){btnDislike.disabled=false;btnLike.disabled=false;return}const didDislike=userDisliked(sid);if(!didDislike){if(userLiked(sid)){await removeLike(sid)}const payloadText=`d(${sid})`;try{const res=await fetch(POST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'create',text:payloadText,user:userName()})});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};if(res.ok&&data.ok&&data.post&&data.post.id){(dislikesByPost[sid] ||= {total:0,byUser:{}});if(!dislikesByPost[sid].byUser[userName()]){dislikesByPost[sid].total++}dislikesByPost[sid].byUser[userName()]=data.post.id;persistDislikes()}}catch{}}else{await removeDislike(sid)}filterAndRender();btnDislike.disabled=false;btnLike.disabled=false};return el}
   $('#q').addEventListener('input',filterAndRender);
+
   const composeTxt=$('#composeTxt');
+  const sendBtn=$('#sendBtn');
+  const composePreview=$('#composePreview');
+  const toast=$('#toast');
+
   function requireLogin(onOk){if(isLogged()){onOk?.();return}openModal(accountModal);$('#lnombre')?.focus()}
-  $('#sendBtn').addEventListener('click',()=>requireLogin(publish));
-  composeTxt.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();requireLogin(publish)}})
+
+  // Publicar original (fallback)
   async function publish(){const textRaw=composeTxt.value.trim();if(!textRaw){composeTxt.focus();return}const fotoParsed=extractFotoToken(textRaw);const baseWithoutFoto=fotoParsed.textNoFoto;const{clean,tags}=extractTagsAndClean(visibleText(baseWithoutFoto));const temp={id:genId(),ts:Date.now(),text:clean,tags,media:[],user:userName(),parent:null,fotoId:fotoParsed.fotoId,_server:false,_pending:true};feed.push(temp);persist();filterAndRender();composeTxt.value='';window.scrollTo({top:0,behavior:'smooth'});try{const res=await fetch(POST_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:'create',text:textRaw,user:userName()})});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};if(res.ok&&data.ok&&data.post&&data.post.id){const serverId=data.post.id;const idx=feed.findIndex(p=>p.id===temp.id);if(idx>=0){feed[idx].id=serverId;feed[idx]._server=true;feed[idx]._pending=false;persist();filterAndRender()}}}catch{}}
+
+  // Handler externo estilo "primer código"
+  let _publishHandler=null;
+  function attachPublish(handler){_publishHandler=typeof handler==='function'?handler:null}
+
+  async function doPublish(){if(_publishHandler){const note=(composeTxt.value||'').trim();if(!note){composeTxt.focus();return}const original=sendBtn.textContent;sendBtn.textContent='Publicando…';sendBtn.disabled=true;try{const ok=await _publishHandler({note});if(ok){sendBtn.textContent='Publicado';setTimeout(()=>{composeTxt.value=''; composePreview.innerHTML=''; sendBtn.textContent='Publicar'; sendBtn.disabled=false; window.scrollTo({top:0,behavior:'smooth'})},500)}else{sendBtn.textContent='Error';setTimeout(()=>{sendBtn.textContent=original;sendBtn.disabled=false},900)}}catch(e){sendBtn.textContent='Error';setTimeout(()=>{sendBtn.textContent='Publicar';sendBtn.disabled=false},900)}}else{await publish()}}
+
+  sendBtn.addEventListener('click',()=>requireLogin(doPublish));
+  composeTxt.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();requireLogin(doPublish)}})
+
+  // API Publisher (abrir/cerrar/chips/toast/onPublish)
+  function showToast(msg,ms=1500){toast.textContent=msg;toast.classList.add('show');if(ms)setTimeout(()=>toast.classList.remove('show'),ms)}
+  function openComposer(){document.getElementById('composer').scrollIntoView({behavior:'smooth',block:'end'});composeTxt.focus()}
+  function closeComposer(){composeTxt.value='';composePreview.innerHTML=''}
+  function setPreviewChips(chips=[]){composePreview.innerHTML='';chips.forEach(c=>{const el=document.createElement('span');el.className='chip';el.textContent=c;composePreview.appendChild(el)})}
+  window.Publisher={open:openComposer,close:closeComposer,setPreviewChips,toast:showToast,onPublish:attachPublish};
+
+  // Modales / cuenta
   const accountBtn=$('#accountBtn'),accountModal=$('#accountModal'),signupModal=$('#signupModal'),profileModal=$('#profileModal'),closeAccount=$('#closeAccount'),closeSignup=$('#closeSignup'),closeProfile=$('#closeProfile'),appContent=$('#appContent'),composer=$('#composer');
   let _scrollY=0,activeModal=null;
   function openModal(modal){activeModal=modal;modal.style.display='flex';_scrollY=window.scrollY||window.pageYOffset||0;document.body.style.top=`-${_scrollY}px`;document.body.classList.add('modal-open');appContent.setAttribute('inert','');composer.setAttribute('inert','');modal.addEventListener('touchmove',e=>{if(!e.target.closest('.sheet'))e.preventDefault()},{passive:false})}
@@ -364,11 +391,15 @@
   const signupForm=$('#signupForm'),signupBtn=$('#signupSubmit'),signupMsg=$('#signupMsg');
   signupForm.addEventListener('submit',async e=>{e.preventDefault();signupMsg.style.display='none';signupMsg.className='alert';try{signupBtn.disabled=true;const original=signupBtn.textContent;signupBtn.textContent='Creando…';const payload=Object.fromEntries(new FormData(signupForm));const res=await fetch(signupForm.action||'/api/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};signupMsg.style.display='block';if(res.ok&&data.ok){signupMsg.classList.add('ok');signupMsg.textContent=data.message||'Cuenta creada.';setTimeout(()=>{closeModal();openModal(accountModal)},900)}else{signupMsg.classList.add('err');signupMsg.textContent=data.message||'No se pudo crear.'}signupBtn.textContent=original;signupBtn.disabled=false}catch{signupBtn.disabled=false;signupMsg.style.display='block';signupMsg.classList.add('err');signupMsg.textContent='Error de red.'}});
   $('#logoutBtn').addEventListener('click',()=>{localStorage.removeItem('user_nombre');localStorage.removeItem('user_since');closeModal()});
+
   document.addEventListener('click',e=>{const link=e.target.closest('.text a');if(!link)return;if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button===1)return;const href=link.getAttribute('href');if(!href)return;try{const absUrl=new URL(href,location.href).href;const payload={url:absUrl,exp:Date.now()+60000};localStorage.setItem('temp_url',JSON.stringify(payload))}catch{}e.preventDefault();location.href='templocalurl.html'});
+
   (function(){try{const raw=localStorage.getItem('temp_url');if(!raw)return;const obj=JSON.parse(raw);if(!obj||!obj.exp||Date.now()>obj.exp){localStorage.removeItem('temp_url')}}catch{}})();
+
   setHeaderHeightVar();setComposerHeightVar();loadRemote();
   window.addEventListener('resize',()=>{setHeaderHeightVar();setComposerHeightVar()});
   if(window.visualViewport){visualViewport.addEventListener('resize',setComposerHeightVar)}
+
   const attachBtn=$('#attachBtn');
   const attachMenu=$('#attachMenu');
   attachBtn.addEventListener('click',e=>{e.stopPropagation();const isOpen=attachMenu.classList.contains('open');attachMenu.classList.toggle('open',!isOpen);attachBtn.setAttribute('aria-expanded',String(!isOpen))});
