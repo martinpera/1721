@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Error 404</title>
+  <link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="robots" content="noindex" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --logo: clamp(72px, 16vw, 120px);
+      --four: var(--logo);
+      --error: clamp(18px, 3.6vw, 28px);
+      --subt: clamp(15px, 2.8vw, 19px);
+      --foot: clamp(12px, 2vw, 14px);
+
+      --bg:#ffffff;
+      --ink:#0f1114;
+      --muted:#61656f;
+      --line:#ececec;
+
+      --pulse-color:#0f1114;
+      --pulse-border:3px;
+      --pulse-dur:3s;
+
+      --radius:14px;
+      --shadow-s:0 6px 18px rgba(0,0,0,.05);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .main{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:20px;
+      gap:10px;
+      position:relative;
+      z-index:1;
+    }
+
+    .label{
+      font-size:var(--error);
+      font-weight:800;
+      letter-spacing:.12em;
+      margin-bottom:4px;
+    }
+
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      position:relative;
+      z-index:1;
+    }
+    .big{
+      font-size:var(--four);
+      font-weight:800;
+      line-height:1;
+      position:relative;
+      z-index:1;
+    }
+
+    .logoBox{
+      position:relative;
+      width:var(--logo);
+      height:var(--logo);
+      display:grid; place-items:center;
+    }
+    .logo{width:100%;height:100%;object-fit:contain;z-index:1;position:relative}
+
+    .pulse{
+      position:absolute; inset:0;
+      border-radius:50%;
+      border:var(--pulse-border) solid var(--pulse-color);
+      opacity:0;
+      transform:scale(.75);
+      z-index:0;
+      animation:ripple var(--pulse-dur) linear infinite;
+    }
+    .pulse:nth-child(1){animation-delay:0s}
+    .pulse:nth-child(2){animation-delay:.75s}
+    .pulse:nth-child(3){animation-delay:1.5s}
+    .pulse:nth-child(4){animation-delay:2.25s}
+
+    @keyframes ripple{
+      0%{opacity:.32;transform:scale(.85)}
+      50%{opacity:.16;transform:scale(2.8)}
+      100%{opacity:0;transform:scale(4)}
+    }
+
+    .subtitle{
+      font-size:var(--subt);
+      color:var(--muted);
+      opacity:.85;
+      margin-top:6px;
+      position:relative;
+      z-index:1;
+    }
+
+    .cta{
+      margin-top:6px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 16px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      font-weight:600;
+      text-decoration:none;
+      box-shadow:var(--shadow-s);
+      position:relative;
+      z-index:1;
+    }
+
+    footer{
+      padding:12px;
+      font-size:var(--foot);
+      color:var(--muted);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:6px;
+      position:relative;
+      z-index:1;
+    }
+    .footLogo{width:16px;height:16px;object-fit:contain;transform:translateY(2px)}
+    .sep{opacity:.35}
+
+    @media(prefers-reduced-motion:reduce){
+      .pulse{animation:none;display:none}
+    }
+  </style>
+</head>
+<body>
+  <main class="main" role="main" aria-label="Error 404">
+    <div class="label">ERROR</div>
+    <div class="row">
+      <span class="big">4</span>
+      <span class="logoBox" aria-hidden="true">
+        <span class="pulse"></span>
+        <span class="pulse"></span>
+        <span class="pulse"></span>
+        <span class="pulse"></span>
+        <img class="logo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" alt="Logo">
+      </span>
+      <span class="big">4</span>
+    </div>
+    <p class="subtitle">No encontramos la página que buscás</p>
+    <a class="cta" href="index.html">Ir al inicio</a>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span></span>
+    <span class="sep">—</span>
+    <span>Abrí los ojos</span>
+    <img class="footLogo" src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" alt="">
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
