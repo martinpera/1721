@@ -53,9 +53,10 @@
   const backBtn=document.getElementById('backBtn');
   const blurBtn=document.getElementById('blurBtn');
 
-  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
+  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
   const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
-  const TARGET_STRETCH=1.60; // siempre compacto, igual en PC y móvil
+  const LETTER_SPACING_EM=-0.04;          // menos solapamiento
+  const COMPACT_FACTOR=0.95;             // compacidad vertical estable (≈ móvil)
 
   let lines=[], content=null;
 
@@ -102,41 +103,49 @@
   function measureAt(fontPx){
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
-    const cw=ctx.measureText('M').width||fontPx*0.6;
-    const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);
-    const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);
+    ctx.textAlign='left';
+    const mt=ctx.measureText('M');
+    const cw=mt.width||fontPx*0.6;
+    const ch=(mt.actualBoundingBoxAscent||fontPx*0.8)+(mt.actualBoundingBoxDescent||fontPx*0.2);
+    const stepX=Math.max(0.1, cw + LETTER_SPACING_EM*fontPx);
+    const stepY=Math.max(1, ch * COMPACT_FACTOR);
     const rows=lines.length;
     let maxCols=0; for(const ln of lines){if(ln.length>maxCols)maxCols=ln.length}
     const w=maxCols>0?(stepX*(maxCols-1)+cw):1;
-    const h=Math.max(1,rows*stepY);
-    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx};
+    const h=Math.max(1, rows*stepY);
+    return {w,h,cw,ch,stepX,stepY,maxCols,rows,fontPx};
   }
 
   function pickSafeFontPx(startPx){
     let px=Math.max(MIN_FONT_PX,startPx|0);
-    let dpr=Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1));
+    let dpr=Math.round(Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1))); // DPR entero
     for(let i=0;i<40;i++){
       const m=measureAt(px);
       const W=Math.ceil(m.w*dpr), H=Math.ceil(m.h*dpr), area=W*H;
       if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,metrics:m};
       px=Math.max(MIN_FONT_PX,Math.floor(px*0.9));
     }
-    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1)),metrics:measureAt(MIN_FONT_PX)};
+    return {px:MIN_FONT_PX,dpr:Math.round(Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1))),metrics:measureAt(MIN_FONT_PX)};
   }
 
   function renderIntrinsic(){
     const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT);
     const dpr=pick.dpr;
     content=pick.metrics;
+
     const W=Math.max(1,Math.ceil(content.w*dpr));
     const H=Math.max(1,Math.ceil(content.h*dpr));
     canvas.width=W; canvas.height=H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
+
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
+
     ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
     ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
+    ctx.textAlign='left';
+
     const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
       const line=lines[y]; const py=Math.round(y*stepY);
@@ -145,8 +154,9 @@
         ctx.fillText(line[x],px,py);
       }
     }
-    canvas.style.width=Math.ceil(content.w)+'px';
-    canvas.style.height=Math.ceil(content.h)+'px';
+
+    canvas.style.width=Math.round(content.w)+'px';
+    canvas.style.height=Math.round(content.h)+'px';
     applyShrinkScale();
   }
 
@@ -156,8 +166,8 @@
     const availW=Math.max(1,cw- SAFE_PAD*2);
     const availH=Math.max(1,ch- SAFE_PAD*2);
     const scale=Math.min(1, availW/content.w, availH/content.h);
-    canvas.style.width=Math.floor(content.w*scale)+'px';
-    canvas.style.height=Math.floor(content.h*scale)+'px';
+    canvas.style.width=Math.round(content.w*scale)+'px';
+    canvas.style.height=Math.round(content.h*scale)+'px';
   }
 
   function handleViewportChange(){
@@ -180,11 +190,14 @@
       const user=f.usuario?('@'+f.usuario):'@anon';
       const fmt=f.codif?String(f.codif):'';
       headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
+
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
+
       await nextFrame();
       renderIntrinsic();
       showLoaded();
+
       addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
       addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));
       if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange))}
