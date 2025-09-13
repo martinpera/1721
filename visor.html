@@ -15,7 +15,6 @@
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stage{position:fixed;z-index:1;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;overflow:hidden;background:#000}
   canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease;filter:grayscale(1)}
-  @media (min-width:821px){canvas#art{font-weight:700}}
   .loading{position:fixed;z-index:2;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;background:#000}
   .hidden{display:none}
 </style>
@@ -56,8 +55,7 @@
 
   const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
   const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
-  const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
-  const TARGET_STRETCH=IS_MOBILE?1.60:1.40;
+  const TARGET_STRETCH=1.60; // siempre compacto, igual en PC y móvil
 
   let lines=[], content=null;
 
@@ -137,8 +135,7 @@
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
     ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
-    const isDesktop=!IS_MOBILE;
-    ctx.font=`${content.fontPx}px ${isDesktop?'bold ':''}ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
@@ -210,9 +207,6 @@
 </script>
 </body>
 </html>
-
-
-
 
 
 
