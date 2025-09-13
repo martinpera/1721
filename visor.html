@@ -200,7 +200,7 @@
     const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
     blurBtn.setAttribute('aria-pressed',String(on));
     blurBtn.classList.toggle('on',on);
-    canvas.style.filter=on?'grayscale(1) blur(1.2px) brightness(2.25) contrast(1.05)':'grayscale(1)';
+    canvas.style.filter=on?'grayscale(1) blur(1.2px) brightness(1.75) contrast(1.05)':'grayscale(1)';
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
@@ -208,23 +208,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
