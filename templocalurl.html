@@ -18,6 +18,7 @@
       margin:0; padding:20px; font-family:Inter,system-ui,sans-serif;
       background:#fff;
       color:var(--ink); display:flex; justify-content:center; align-items:center; min-height:100vh;
+      touch-action:manipulation; overscroll-behavior:none
     }
     .card{
       max-width:640px; width:100%; background:#f4f4f4;
@@ -49,37 +50,24 @@
   <div class="card" id="card"></div>
 
   <script>
+    ['gesturestart','gesturechange','gestureend','dblclick'].forEach(evt=>{document.addEventListener(evt,e=>{e.preventDefault()},{passive:false})});
+    document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});
+    document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['=','+','-','0'].includes(e.key))e.preventDefault()});
     (function(){
       const card = document.getElementById('card');
-
-      function to404(){
-        location.href = 'index.html';
-      }
-
-      function escapeHtml(s){
-        return String(s).replace(/[&<>"']/g, ch => ({
-          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-        }[ch]));
-      }
-
+      function to404(){location.href='index.html'}
+      function escapeHtml(s){return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]))}
       let payload=null;
       try{
-        const raw = localStorage.getItem('temp_url');
+        const raw=localStorage.getItem('temp_url');
         if(raw){
-          const obj = JSON.parse(raw);
-          if(obj && obj.url && obj.exp && Date.now()<=obj.exp){
-            payload = obj;
-          } else {
-            localStorage.removeItem('temp_url');
-          }
+          const obj=JSON.parse(raw);
+          if(obj&&obj.url&&obj.exp&&Date.now()<=obj.exp){payload=obj}else{localStorage.removeItem('temp_url')}
         }
       }catch{}
-
-      if(!payload){ to404(); return; }
-
+      if(!payload){to404();return}
       let domain='';
-      try{ domain=new URL(payload.url).hostname; }catch{}
-
+      try{domain=new URL(payload.url).hostname}catch{}
       card.innerHTML=`
         <h1>Atención: estás saliendo del sitio</h1>
         <div class="alert">
@@ -94,25 +82,19 @@
           <button id="cancelBtn" class="btn ghost">Cancelar</button>
         </div>
       `;
-
       document.getElementById('goBtn').onclick=()=>{
         try{
           const raw=localStorage.getItem('temp_url');
-          if(!raw){ to404(); return; }
+          if(!raw){to404();return}
           const obj=JSON.parse(raw);
-          if(!obj||!obj.url||!obj.exp||Date.now()>obj.exp){
-            localStorage.removeItem('temp_url');
-            to404(); return;
-          }
-          location.href=obj.url;
-        }catch{ to404(); }
+          if(!obj||!obj.url||!obj.exp||Date.now()>obj.exp){localStorage.removeItem('temp_url');to404();return}
+          location.href=obj.url
+        }catch{to404()}
       };
-
-      document.getElementById('cancelBtn').onclick=()=>{
-        if(history.length>1){ history.back(); }
-        else{ location.href='index.html'; }
-      };
+      document.getElementById('cancelBtn').onclick=()=>{if(history.length>1){history.back()}else{location.href='index.html'}};
     })();
   </script>
 </body>
 </html>
+
+
