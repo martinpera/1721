@@ -45,66 +45,191 @@
 
 <script>
 (function(){
-  const canvas = document.getElementById('art')
-  const ctx = canvas.getContext('2d', { alpha:false })
-  const headerMeta = document.getElementById('headerMeta')
-  const backBtn = document.getElementById('backBtn')
-  const blurBtn = document.getElementById('blurBtn')
-  const SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16
-  const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820
-  const TARGET_STRETCH=1.5
-  const SUPER = 2
-  const MAX_SIDE=8192, MAX_AREA=16777216
-  let lines=[], content=null
-  function setHeaderH(){const h=(document.querySelector('header.top')?.offsetHeight||56);document.documentElement.style.setProperty('--header-h',h+'px')}
-  setHeaderH()
-  const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))
-  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw) return null;const o=JSON.parse(raw);if(o&&o.exp&&Date.now()>o.exp) return null;return o}catch{return null}}
-  async function fetchFoto(id){const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});if(!r.ok) throw new Error('No se pudo obtener la imagen');const j=await r.json();if(!j||!j.ok||!j.foto) throw new Error(j?.message||'No encontrado');return j.foto}
-  function parseWithMarkers(s){const out=[], re=/X\*{5}([\s\S]*?)\*{5}X/g;let m, any=false;while((m=re.exec(s))!==null){any=true;out.push(m[1])}if(any) return out;return String(s).replace(/\r\n/g,'\n').split('\n')}
-  function trimVertical(src){let a=0,b=src.length-1;while(a<=b&&/^\s*$/.test(src[a]))a++;while(b>=a&&/^\s*$/.test(src[b]))b--;return src.slice(a,b+1)}
-  function stageSize(){const headerH=(document.querySelector('header.top')?.offsetHeight||56);const cw=Math.max(1,innerWidth-16);const ch=Math.max(1,innerHeight-headerH-16);return {cw,ch}}
-  const tmpCanvas=document.createElement('canvas')
-  const tmpCtx=tmpCanvas.getContext('2d')
-  function measureAt(fontPx){tmpCtx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;tmpCtx.textBaseline='top';const cw=tmpCtx.measureText('M').width||fontPx*0.6;const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);const rows=lines.length;let maxCols=0;for(const ln of lines){if(ln.length>maxCols) maxCols=ln.length}const w=maxCols>0?(stepX*(maxCols-1)+cw):1;const h=Math.max(1,rows*stepY);return {w,h,cw,stepX,stepY,maxCols,rows,fontPx}}
-  function pickSafeFontPx(startPx){let px=Math.max(MIN_FONT_PX,startPx|0);for(let i=0;i<40;i++){const m=measureAt(px);const W=Math.ceil(m.w*SUPER), H=Math.ceil(m.h*SUPER), area=W*H;if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,metrics:m};px=Math.max(MIN_FONT_PX,Math.floor(px*0.9))}return {px:MIN_FONT_PX,metrics:measureAt(MIN_FONT_PX)}}
-  function renderIntrinsic(){
-    const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT)
-    content=pick.metrics
-    const ow=Math.max(1,Math.ceil(content.w*SUPER))
-    const oh=Math.max(1,Math.ceil(content.h*SUPER))
-    const off=(typeof OffscreenCanvas!=='undefined')?new OffscreenCanvas(ow,oh):(()=>{const c=document.createElement('canvas');c.width=ow;c.height=oh;return c})()
-    const octx=off.getContext('2d',{alpha:false})
-    octx.setTransform(SUPER,0,0,SUPER,0,0)
-    octx.fillStyle='#000';octx.fillRect(0,0,content.w,content.h)
-    octx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#eaeaea'
-    octx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`
-    octx.textBaseline='top'
-    const stepX=content.stepX, stepY=content.stepY
-    for(let y=0;y<lines.length;y++){const line=lines[y];const py=Math.round(y*stepY);for(let x=0;x<line.length;x++){const px=Math.round(x*stepX);octx.fillText(line[x],px,py)}}
-    const img=octx.getImageData(0,0,ow,oh)
-    const d=img.data
-    for(let i=0;i<d.length;i+=4){const y=0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2];d[i]=d[i+1]=d[i+2]=y|0}
-    octx.putImageData(img,0,0)
-    canvas.width=ow;canvas.height=oh
-    ctx.setTransform(1,0,0,1,0,0)
-    ctx.drawImage(off,0,0)
-    canvas.style.filter='none'
-    canvas.style.width=Math.ceil(content.w)+'px'
-    canvas.style.height=Math.ceil(content.h)+'px'
-    applyShrinkScale()
+  const canvas=document.getElementById('art');
+  const ctx=canvas.getContext('2d',{alpha:false});
+  const stage=document.getElementById('stage');
+  const loading=document.getElementById('loading');
+  const headerMeta=document.getElementById('headerMeta');
+  const backBtn=document.getElementById('backBtn');
+  const blurBtn=document.getElementById('blurBtn');
+
+  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
+  const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
+  const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
+  const TARGET_STRETCH=IS_MOBILE?1.60:1.40;
+
+  let lines=[], content=null;
+
+  function blockZoom(){
+    ['gesturestart','gesturechange','gestureend','dblclick'].forEach(evt=>{
+      document.addEventListener(evt,e=>{e.preventDefault()},{passive:false});
+    });
+    document.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey)e.preventDefault()},{passive:false});
   }
-  function applyShrinkScale(){if(!content) return;const {cw,ch}=stageSize();const availW=Math.max(1,cw-SAFE_PAD*2);const availH=Math.max(1,ch-SAFE_PAD*2);const scale=Math.min(1,availW/content.w,availH/content.h);canvas.style.width=Math.floor(content.w*scale)+'px';canvas.style.height=Math.floor(content.h*scale)+'px'}
-  function handleViewportChange(){setHeaderH();applyShrinkScale()}
-  function showError(msg){lines=[msg||'No se pudo cargar'];renderIntrinsic()}
-  async function init(){try{const tmp=readTemp();if(!tmp||!tmp.id){headerMeta.textContent='';showError('Nada para mostrar');return}const f=await fetchFoto(tmp.id);const user=f.usuario?('@'+f.usuario):'@anon';const fmt=f.codif?String(f.codif):'';headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;const asciiRaw=String(f.txt||'');lines=trimVertical(parseWithMarkers(asciiRaw));await nextFrame();renderIntrinsic();addEventListener('resize',()=>requestAnimationFrame(handleViewportChange));addEventListener('orientationchange',()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));if(window.visualViewport){visualViewport.addEventListener('resize',()=>requestAnimationFrame(handleViewportChange))}}catch(e){headerMeta.textContent='Error';showError('No se pudo cargar')}}
-  backBtn.onclick=()=>{history.length>1?history.back():location.href='/'}
-  blurBtn.onclick=()=>{const on=blurBtn.getAttribute('aria-pressed')!=='true';blurBtn.setAttribute('aria-pressed',String(on));canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none'}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init()
+  blockZoom();
+
+  function setHeaderH(){
+    const h=(document.querySelector('header.top')?.offsetHeight||56);
+    document.documentElement.style.setProperty('--header-h',h+'px');
+  }
+  setHeaderH();
+
+  function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
+  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
+  async function fetchFoto(id){
+    const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});
+    if(!r.ok)throw new Error('No se pudo obtener la imagen');
+    const j=await r.json(); if(!j||!j.ok||!j.foto)throw new Error(j?.message||'No encontrado'); return j.foto;
+  }
+  function parseWithMarkers(s){
+    const out=[], re=/X\*{5}([\s\S]*?)\*{5}X/g; let m, any=false;
+    while((m=re.exec(s))!==null){any=true;out.push(m[1])}
+    if(any)return out;
+    return String(s).replace(/\r\n/g,'\n').split('\n');
+  }
+  function trimVertical(src){
+    let a=0,b=src.length-1;
+    while(a<=b&&/^\s*$/.test(src[a]))a++;
+    while(b>=a&&/^\s*$/.test(src[b]))b--;
+    return src.slice(a,b+1);
+  }
+  function stageSize(){
+    const headerH=(document.querySelector('header.top')?.offsetHeight||56);
+    const cw=Math.max(1,innerWidth-16);
+    const ch=Math.max(1,innerHeight-headerH-16);
+    return {cw,ch};
+  }
+
+  function measureAt(fontPx){
+    ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.textBaseline='top';
+    const cw=ctx.measureText('M').width||fontPx*0.6;
+
+    const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);
+    const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);
+
+    const rows=lines.length;
+    let maxCols=0; for(const ln of lines){if(ln.length>maxCols)maxCols=ln.length}
+    const w=maxCols>0?(stepX*(maxCols-1)+cw):1;
+    const h=Math.max(1,rows*stepY);
+    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx};
+  }
+
+  function pickSafeFontPx(startPx){
+    let px=Math.max(MIN_FONT_PX,startPx|0);
+    let dpr=Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1));
+    for(let i=0;i<40;i++){
+      const m=measureAt(px);
+      const W=Math.ceil(m.w*dpr), H=Math.ceil(m.h*dpr), area=W*H;
+      if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,metrics:m};
+      px=Math.max(MIN_FONT_PX,Math.floor(px*0.9));
+    }
+    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1)),metrics:measureAt(MIN_FONT_PX)};
+  }
+
+  function renderIntrinsic(){
+    const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT);
+    const dpr=pick.dpr;
+    content=pick.metrics;
+
+    const W=Math.max(1,Math.ceil(content.w*dpr));
+    const H=Math.max(1,Math.ceil(content.h*dpr));
+    canvas.width=W; canvas.height=H;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    ctx.fillStyle='#000';
+    ctx.fillRect(0,0,content.w,content.h);
+
+    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
+    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.textBaseline='top';
+
+    const stepX=content.stepX, stepY=content.stepY;
+    for(let y=0;y<lines.length;y++){
+      const line=lines[y]; const py=Math.round(y*stepY);
+      for(let x=0;x<line.length;x++){
+        const px=Math.round(x*stepX);
+        ctx.fillText(line[x],px,py);
+      }
+    }
+
+    canvas.style.width=Math.ceil(content.w)+'px';
+    canvas.style.height=Math.ceil(content.h)+'px';
+    applyShrinkScale();
+  }
+
+  function applyShrinkScale(){
+    if(!content)return;
+    const {cw,ch}=stageSize();
+    const availW=Math.max(1,cw- SAFE_PAD*2);
+    const availH=Math.max(1,ch- SAFE_PAD*2);
+    const scale=Math.min(1, availW/content.w, availH/content.h);
+    canvas.style.width=Math.floor(content.w*scale)+'px';
+    canvas.style.height=Math.floor(content.h*scale)+'px';
+  }
+
+  function handleViewportChange(){
+    setHeaderH();
+    applyShrinkScale(); 
+  }
+
+  function showLoaded(){loading.classList.add('hidden')}
+  function showError(msg){
+    lines=[msg||'No se pudo cargar'];
+    renderIntrinsic();
+    showLoaded();
+  }
+
+  async function init(){
+    try{
+      const tmp=readTemp();
+      if(!tmp||!tmp.id){headerMeta.textContent=''; showError('Nada para mostrar'); return}
+      const f=await fetchFoto(tmp.id);
+      const user=f.usuario?('@'+f.usuario):'@anon';
+      const fmt=f.codif?String(f.codif):'';
+      headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
+
+      const asciiRaw=String(f.txt||'');
+      lines=trimVertical(parseWithMarkers(asciiRaw));
+
+      await nextFrame();
+      renderIntrinsic();
+      showLoaded();
+
+      addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));
+      if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange))}
+    }catch(e){
+      headerMeta.textContent='Error';
+      showError('No se pudo cargar');
+    }
+  }
+
+  backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
+  blurBtn.onclick=()=>{
+    const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
+    blurBtn.setAttribute('aria-pressed',String(on));
+    blurBtn.classList.toggle('on',on);
+    /* más potente + ilumina */
+    canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none';
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 
 
 
