@@ -54,19 +54,22 @@
   const blurBtn=document.getElementById('blurBtn');
 
   const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
-  const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
   const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
-  const TARGET_STRETCH=IS_MOBILE?1.60:1.40;
+
+  // --- Ajustes clave para desktop ---
+  const TARGET_STRETCH=1.5;                 // uniforme (saca diferencias iOS/desktop)
+  const MAX_DPR=3;
+  const FORCE_SUPER_DPR = IS_MOBILE ? null : 2; // 2x en desktop para nitidez
+  const DESKTOP_BASE_FILTER = IS_MOBILE ? 'none' : 'grayscale(1) contrast(1.06)'; // mata fringing
 
   let lines=[], content=null;
 
-  function blockZoom(){
+  (function blockZoom(){
     ['gesturestart','gesturechange','gestureend','dblclick'].forEach(evt=>{
       document.addEventListener(evt,e=>{e.preventDefault()},{passive:false});
     });
     document.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey)e.preventDefault()},{passive:false});
-  }
-  blockZoom();
+  })();
 
   function setHeaderH(){
     const h=(document.querySelector('header.top')?.offsetHeight||56);
@@ -74,8 +77,8 @@
   }
   setHeaderH();
 
-  function nextFrame(){return new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))}
-  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const obj=JSON.parse(raw);if(obj&&obj.exp&&Date.now()>obj.exp)return null;return obj}catch{return null}}
+  const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  function readTemp(){try{const raw=localStorage.getItem('temp_foto');if(!raw)return null;const o=JSON.parse(raw);if(o&&o.exp&&Date.now()>o.exp)return null;return o}catch{return null}}
   async function fetchFoto(id){
     const r=await fetch('/api/obtenerimg',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','Cache-Control':'no-store'},body:JSON.stringify({id})});
     if(!r.ok)throw new Error('No se pudo obtener la imagen');
@@ -117,14 +120,15 @@
 
   function pickSafeFontPx(startPx){
     let px=Math.max(MIN_FONT_PX,startPx|0);
-    let dpr=Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1));
+    let dprBase=window.devicePixelRatio||1;
+    let dpr=Math.max(1, Math.min(MAX_DPR, FORCE_SUPER_DPR || dprBase)); // <-- supermuestreo desktop
     for(let i=0;i<40;i++){
       const m=measureAt(px);
       const W=Math.ceil(m.w*dpr), H=Math.ceil(m.h*dpr), area=W*H;
       if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,metrics:m};
       px=Math.max(MIN_FONT_PX,Math.floor(px*0.9));
     }
-    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1)),metrics:measureAt(MIN_FONT_PX)};
+    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,FORCE_SUPER_DPR|| (window.devicePixelRatio||1))),metrics:measureAt(MIN_FONT_PX)};
   }
 
   function renderIntrinsic(){
@@ -140,7 +144,7 @@
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
 
-    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#eaeaea';
     ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
 
@@ -156,6 +160,7 @@
     canvas.style.width=Math.ceil(content.w)+'px';
     canvas.style.height=Math.ceil(content.h)+'px';
     applyShrinkScale();
+    applyFilter();
   }
 
   function applyShrinkScale(){
@@ -166,6 +171,12 @@
     const scale=Math.min(1, availW/content.w, availH/content.h);
     canvas.style.width=Math.floor(content.w*scale)+'px';
     canvas.style.height=Math.floor(content.h*scale)+'px';
+  }
+
+  function applyFilter(){
+    const blurOn = blurBtn.getAttribute('aria-pressed')==='true';
+    const blurPart = blurOn ? ' blur(1.2px) brightness(1.08) contrast(1.05)' : '';
+    canvas.style.filter = DESKTOP_BASE_FILTER + blurPart; // gris en desktop, igual que iOS
   }
 
   function handleViewportChange(){
@@ -206,20 +217,13 @@
   }
 
   backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
-  blurBtn.onclick=()=>{
-    const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
-    blurBtn.setAttribute('aria-pressed',String(on));
-    blurBtn.classList.toggle('on',on);
-    /* más potente + ilumina */
-    canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none';
-  };
+  blurBtn.onclick=()=>{const on=blurBtn.getAttribute('aria-pressed')!=='true';blurBtn.setAttribute('aria-pressed',String(on));applyFilter();};
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
 </html>
-
 
 
 
