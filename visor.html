@@ -53,10 +53,12 @@
   const backBtn=document.getElementById('backBtn');
   const blurBtn=document.getElementById('blurBtn');
 
+  const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
   const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
   const MAX_DPR=/(iPhone|iPad)/i.test(navigator.userAgent)?2:3;
-  const LETTER_SPACING_EM=-0.08;
-  const LINE_HEIGHT=0.78;
+
+  const LETTER_SPACING_EM=IS_MOBILE?-0.06:-0.10;
+  const LINE_HEIGHT=IS_MOBILE?0.98:0.74;
 
   let lines=[], content=null;
 
@@ -133,7 +135,8 @@
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
     ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
-    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    const desktop=!IS_MOBILE;
+    ctx.font=`${content.fontPx}px ${desktop?'600 ':''}ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
@@ -205,12 +208,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
 
 
 
