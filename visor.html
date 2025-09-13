@@ -14,8 +14,7 @@
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;min-width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 10px}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stage{position:fixed;z-index:1;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;overflow:hidden;background:#000}
-  canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease;filter:grayscale(1)}
-  @media (min-width:821px){canvas#art{font-weight:700}}
+  canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease}
   .loading{position:fixed;z-index:2;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;background:#000}
   .hidden{display:none}
 </style>
@@ -105,8 +104,10 @@
     ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const cw=ctx.measureText('M').width||fontPx*0.6;
+
     const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);
     const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);
+
     const rows=lines.length;
     let maxCols=0; for(const ln of lines){if(ln.length>maxCols)maxCols=ln.length}
     const w=maxCols>0?(stepX*(maxCols-1)+cw):1;
@@ -130,16 +131,19 @@
     const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT);
     const dpr=pick.dpr;
     content=pick.metrics;
+
     const W=Math.max(1,Math.ceil(content.w*dpr));
     const H=Math.max(1,Math.ceil(content.h*dpr));
     canvas.width=W; canvas.height=H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
+
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
+
     ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
-    const isDesktop=!IS_MOBILE;
-    ctx.font=`${content.fontPx}px ${isDesktop?'bold ':''}ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
+
     const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
       const line=lines[y]; const py=Math.round(y*stepY);
@@ -148,6 +152,7 @@
         ctx.fillText(line[x],px,py);
       }
     }
+
     canvas.style.width=Math.ceil(content.w)+'px';
     canvas.style.height=Math.ceil(content.h)+'px';
     applyShrinkScale();
@@ -165,7 +170,7 @@
 
   function handleViewportChange(){
     setHeaderH();
-    applyShrinkScale();
+    applyShrinkScale(); 
   }
 
   function showLoaded(){loading.classList.add('hidden')}
@@ -183,11 +188,14 @@
       const user=f.usuario?('@'+f.usuario):'@anon';
       const fmt=f.codif?String(f.codif):'';
       headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
+
       const asciiRaw=String(f.txt||'');
       lines=trimVertical(parseWithMarkers(asciiRaw));
+
       await nextFrame();
       renderIntrinsic();
       showLoaded();
+
       addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
       addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));
       if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange))}
@@ -202,7 +210,8 @@
     const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
     blurBtn.setAttribute('aria-pressed',String(on));
     blurBtn.classList.toggle('on',on);
-    canvas.style.filter=on?'grayscale(1) blur(1.2px) brightness(1.5) contrast(1.05)':'grayscale(1)';
+    /* más potente + ilumina */
+    canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none';
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
@@ -210,6 +219,17 @@
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
 
 
 
