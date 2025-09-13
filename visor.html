@@ -6,13 +6,13 @@
 <title>Visor</title>
 <link rel="icon" href="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi_hzdAeGD1r9dY8htUSrH5WyLWPR4Xw3G390Nxfsl5zSXl9rnEuK7LG3GRHlvhFyhpzP2vyix-QncMJxnyx0bBimWxKk7ZU1-lzG410NMxtPXH4H7R6QxoUcEJ7uPisB2VyWuANC5O31ArDgOgNgnnQRAWV_TPhB-F7d8DuqWo3PRTNi_vPQ2oHJBi3vp0/s1890/logo.png" type="image/png">
 <style>
-  :root{--bg:#000;--ink:#eaeaea;--line:#1a1a1a;--header-h:56px}
+  :root{--bg:#000;--ink:#f5f5f5;--line:#1a1a1a;--header-h:56px}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden;touch-action:manipulation}
   header.top{position:fixed;z-index:10;top:0;left:0;right:0;height:56px;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);background:#000}
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;min-width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 10px}
-  .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .title{justify-self:center;font-size:14px;color:#cfd3da;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stage{position:fixed;z-index:1;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;overflow:hidden;background:#000}
   canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease;filter:grayscale(1)}
   .loading{position:fixed;z-index:2;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;background:#000}
@@ -57,8 +57,8 @@
   const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
   const MAX_DPR=/(iPhone|iPad)/i.test(navigator.userAgent)?2:3;
 
-  const LETTER_SPACING_EM=IS_MOBILE?-0.06:-0.10;
-  const LINE_HEIGHT=IS_MOBILE?0.98:0.74;
+  const LETTER_SPACING_EM=IS_MOBILE?-0.035:-0.06;
+  const LINE_HEIGHT=IS_MOBILE?1.00:0.90;
 
   let lines=[], content=null;
 
@@ -134,9 +134,8 @@
     ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.fillStyle='#000';
     ctx.fillRect(0,0,content.w,content.h);
-    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
-    const desktop=!IS_MOBILE;
-    ctx.font=`${content.fontPx}px ${desktop?'600 ':''}ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#f5f5f5';
+    ctx.font=`${content.fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
     const stepX=content.stepX, stepY=content.stepY;
     for(let y=0;y<lines.length;y++){
@@ -208,8 +207,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
