@@ -14,7 +14,8 @@
   .btn{font-size:12px;color:#eaeaea;background:#111;border:1px solid #2b2b2b;border-radius:10px;height:32px;min-width:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0 10px}
   .title{justify-self:center;font-size:14px;color:#eaeaea;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stage{position:fixed;z-index:1;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;overflow:hidden;background:#000}
-  canvas#art{display:block;background:#000;transition:filter .15s ease;filter:grayscale(1)}
+  canvas#art{display:block;background:#000;image-rendering:auto;transition:filter .15s ease}
+  @media (min-width:821px){canvas#art{font-weight:700}}
   .loading{position:fixed;z-index:2;top:calc(var(--header-h) + 8px);left:8px;right:8px;bottom:8px;display:grid;place-items:center;background:#000}
   .hidden{display:none}
 </style>
@@ -53,11 +54,12 @@
   const backBtn=document.getElementById('backBtn');
   const blurBtn=document.getElementById('blurBtn');
 
-  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, MIN_FONT_PX=10, BASE_FONT_PX_DEFAULT=16;
+  const MAX_SIDE=8192, MAX_AREA=16777216, SAFE_PAD=2, LETTER_SPACING_EM=-0.06, MIN_FONT_PX=6, BASE_FONT_PX_DEFAULT=16;
+  const MAX_DPR=(/(iPhone|iPad)/i.test(navigator.userAgent))?2:3;
   const IS_MOBILE=/iPhone|iPad|Android/i.test(navigator.userAgent)||Math.min(innerWidth,innerHeight)<=820;
-  const DPR_MIN_DESKTOP=2, DPR_MAX=3;
+  const TARGET_STRETCH=IS_MOBILE?1.60:1.40;
 
-  let lines=[], metrics=null;
+  let lines=[], content=null;
 
   function blockZoom(){
     ['gesturestart','gesturechange','gestureend','dblclick'].forEach(evt=>{
@@ -99,82 +101,84 @@
     return {cw,ch};
   }
 
-  function measure(fontPx){
-    ctx.font=`${fontPx}px Menlo, Consolas, ui-monospace, SFMono-Regular, monospace`;
+  function measureAt(fontPx){
+    ctx.font=`${fontPx}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
-    const m=ctx.measureText('M');
-    const ascent=m.actualBoundingBoxAscent||fontPx*0.8;
-    const descent=m.actualBoundingBoxDescent||fontPx*0.2;
-    const lineH=(ascent+descent)*1.08;
-    let w=1;
-    for(const ln of lines){
-      const lw=ctx.measureText(ln).width;
-      if(lw>w) w=lw;
-    }
-    const h=Math.max(1,Math.ceil(lines.length*lineH));
-    return {w,h,lineH,fontPx};
+    const cw=ctx.measureText('M').width||fontPx*0.6;
+
+    const stepX=Math.max(0.1,cw+LETTER_SPACING_EM*fontPx);
+    const stepY=Math.max(1,fontPx*(cw/fontPx)*TARGET_STRETCH);
+
+    const rows=lines.length;
+    let maxCols=0; for(const ln of lines){if(ln.length>maxCols)maxCols=ln.length}
+    const w=maxCols>0?(stepX*(maxCols-1)+cw):1;
+    const h=Math.max(1,rows*stepY);
+    return {w,h,cw,stepX,stepY,maxCols,rows,fontPx};
   }
 
-  function pick(fontStart){
-    let px=Math.max(MIN_FONT_PX,fontStart|0);
-    let dpr=Math.max(1,(window.devicePixelRatio||1));
-    if(!IS_MOBILE) dpr=Math.max(DPR_MIN_DESKTOP,dpr);
-    dpr=Math.min(DPR_MAX,dpr);
-    for(let i=0;i<30;i++){
-      const m=measure(px);
+  function pickSafeFontPx(startPx){
+    let px=Math.max(MIN_FONT_PX,startPx|0);
+    let dpr=Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1));
+    for(let i=0;i<40;i++){
+      const m=measureAt(px);
       const W=Math.ceil(m.w*dpr), H=Math.ceil(m.h*dpr), area=W*H;
-      if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,m};
+      if(W<=MAX_SIDE && H<=MAX_SIDE && area<=MAX_AREA) return {px,dpr,metrics:m};
       px=Math.max(MIN_FONT_PX,Math.floor(px*0.9));
     }
-    return {px:MIN_FONT_PX,dpr, m:measure(MIN_FONT_PX)};
+    return {px:MIN_FONT_PX,dpr:Math.max(1,Math.min(MAX_DPR,window.devicePixelRatio||1)),metrics:measureAt(MIN_FONT_PX)};
   }
 
-  function render(){
-    const pickRes=pick(BASE_FONT_PX_DEFAULT);
-    const dpr=pickRes.dpr; metrics=pickRes.m;
+  function renderIntrinsic(){
+    const pick=pickSafeFontPx(BASE_FONT_PX_DEFAULT);
+    const dpr=pick.dpr;
+    content=pick.metrics;
 
-    const W=Math.max(1,Math.ceil(metrics.w*dpr));
-    const H=Math.max(1,Math.ceil(metrics.h*dpr));
+    const W=Math.max(1,Math.ceil(content.w*dpr));
+    const H=Math.max(1,Math.ceil(content.h*dpr));
     canvas.width=W; canvas.height=H;
     ctx.setTransform(dpr,0,0,dpr,0,0);
 
     ctx.fillStyle='#000';
-    ctx.fillRect(0,0,metrics.w,metrics.h);
+    ctx.fillRect(0,0,content.w,content.h);
 
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#eaeaea';
-    ctx.font=`${metrics.fontPx}px Menlo, Consolas, ui-monospace, SFMono-Regular, monospace`;
+    ctx.fillStyle=(getComputedStyle(document.documentElement).getPropertyValue('--ink')||'#eaeaea').trim()||'#eaeaea';
+    const isDesktop=!IS_MOBILE;
+    ctx.font=`${content.fontPx}px ${isDesktop?'bold ':''}ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
     ctx.textBaseline='top';
 
-    const lh=metrics.lineH;
-    for(let i=0;i<lines.length;i++){
-      const y=Math.round(i*lh);
-      ctx.fillText(lines[i],0,y);
+    const stepX=content.stepX, stepY=content.stepY;
+    for(let y=0;y<lines.length;y++){
+      const line=lines[y]; const py=Math.round(y*stepY);
+      for(let x=0;x<line.length;x++){
+        const px=Math.round(x*stepX);
+        ctx.fillText(line[x],px,py);
+      }
     }
 
-    canvas.style.width=Math.ceil(metrics.w)+'px';
-    canvas.style.height=Math.ceil(metrics.h)+'px';
-    shrinkToStage();
+    canvas.style.width=Math.ceil(content.w)+'px';
+    canvas.style.height=Math.ceil(content.h)+'px';
+    applyShrinkScale();
   }
 
-  function shrinkToStage(){
-    if(!metrics)return;
+  function applyShrinkScale(){
+    if(!content)return;
     const {cw,ch}=stageSize();
     const availW=Math.max(1,cw- SAFE_PAD*2);
     const availH=Math.max(1,ch- SAFE_PAD*2);
-    const scale=Math.min(1, availW/metrics.w, availH/metrics.h);
-    canvas.style.width=Math.floor(metrics.w*scale)+'px';
-    canvas.style.height=Math.floor(metrics.h*scale)+'px';
+    const scale=Math.min(1, availW/content.w, availH/content.h);
+    canvas.style.width=Math.floor(content.w*scale)+'px';
+    canvas.style.height=Math.floor(content.h*scale)+'px';
   }
 
-  function onViewport(){
+  function handleViewportChange(){
     setHeaderH();
-    shrinkToStage();
+    applyShrinkScale(); 
   }
 
   function showLoaded(){loading.classList.add('hidden')}
   function showError(msg){
     lines=[msg||'No se pudo cargar'];
-    render();
+    renderIntrinsic();
     showLoaded();
   }
 
@@ -187,15 +191,16 @@
       const fmt=f.codif?String(f.codif):'';
       headerMeta.textContent=fmt?`${user} · formato:"${fmt}"`:user;
 
-      lines=trimVertical(parseWithMarkers(String(f.txt||'')));
+      const asciiRaw=String(f.txt||'');
+      lines=trimVertical(parseWithMarkers(asciiRaw));
 
       await nextFrame();
-      render();
+      renderIntrinsic();
       showLoaded();
 
-      addEventListener('resize', ()=>requestAnimationFrame(onViewport));
-      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(onViewport),140));
-      if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(onViewport))}
+      addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange));
+      addEventListener('orientationchange', ()=>setTimeout(()=>requestAnimationFrame(handleViewportChange),140));
+      if(window.visualViewport){visualViewport.addEventListener('resize', ()=>requestAnimationFrame(handleViewportChange))}
     }catch(e){
       headerMeta.textContent='Error';
       showError('No se pudo cargar');
@@ -204,9 +209,10 @@
 
   backBtn.onclick=()=>{history.length>1?history.back():location.href='/'};
   blurBtn.onclick=()=>{
-    const on=blurBtn.getAttribute('aria-pressed')!=='true';
+    const on=blurBtn.getAttribute('aria-pressed')==='true'?false:true;
     blurBtn.setAttribute('aria-pressed',String(on));
-    canvas.style.filter= on ? 'grayscale(1) blur(1.2px) brightness(1.08) contrast(1.05)' : 'grayscale(1)';
+    blurBtn.classList.toggle('on',on);
+    canvas.style.filter=on?'blur(1.2px) brightness(1.08) contrast(1.05)':'none';
   };
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
