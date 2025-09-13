@@ -12,10 +12,12 @@
       --bg:#f4f2ed;--ink:#171717;--ink-2:#61656f;--line:#e3e1dc;--card:#ffffff;--r:16px;--shadow:0 10px 28px rgba(0,0,0,.07);
       --max:1100px;--pad:14px;--bar-max:520px;--composer-max:720px;
       --header-h:60px;--composer-h:0px;--red:#e02424;--black:#000;
+      /* safe area (en Safari normal = 0, en PWA > 0) */
       --safe-b: env(safe-area-inset-bottom, 0px);
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;height:100%;overscroll-behavior:none;touch-action:manipulation}
+    /* Reservamos SIEMPRE espacio = alto real del composer + safe-area */
     body{
       background:var(--bg);color:var(--ink);
       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;
@@ -27,6 +29,7 @@
     .legalNote a{color:inherit;text-decoration:underline}
     .text,.meta,.replybox textarea{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
     .text a{color:#0a7;text-decoration:underline}
+
     header{position:fixed;top:0;left:0;right:0;z-index:200;background:#fff;border-bottom:1px solid var(--line)}
     .top{max-width:var(--max);margin:0 auto;padding:10px 12px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:10px;color:var(--black)}
     .brandBtn,.iconbtn{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;cursor:pointer;color:var(--black)}
@@ -36,9 +39,12 @@
     .search{position:relative;justify-self:center;width:clamp(220px,56vw,var(--bar-max))}
     .search input{width:100%;padding:11px 12px 11px 36px;border:1px solid var(--line);border-radius:999px;outline:none;font-size:16px}
     .search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%)}
+
+    /* Además del body, el contenedor interno también reserva */
     .wrap{max-width:var(--max);margin:0 auto;padding:12px 10px;
       padding-bottom:calc(10px + var(--composer-h) + var(--safe-b));
     }
+
     .feed{display:flex;flex-direction:column;gap:12px}
     .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:var(--pad)}
     .meta{display:flex;align-items:center;gap:8px;color:#61656f;font-size:.92rem;margin-bottom:6px;flex-wrap:wrap}
@@ -70,6 +76,8 @@
     .replybox .btn-primary{border:none;background:#111;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
     .replybox .btn-ghost{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer}
     footer{max-width:var(--max);margin:30px auto calc(28px + var(--composer-h) + var(--safe-b));padding:0 12px;color:#61656f;font-size:.9rem;text-align:center}
+
+    /* Composer pegado abajo con padding que contempla la safe-area */
     .composer{
       position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;border-top:1px solid var(--line);
       padding:10px 12px calc(10px + var(--safe-b)); box-shadow:0 -6px 30px rgba(0,0,0,.06)
@@ -79,13 +87,14 @@
     .composer .send{border:none;background:#111;color:#fff;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
     .composer .preview{max-width:var(--max);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
     .chip{border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.85rem;background:#fff}
-    .attach{border:1px solid var(--line);background:#fff;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000}
-    .attach svg{width:20px;height:20px;stroke:currentColor}
+    .attach{border:1px solid var(--line);background:#fff;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .attach svg{width:20px;height:20px}
     .attachMenu{position:absolute;left:0;bottom:52px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px;display:none;min-width:220px;z-index:60}
     .attachMenu.open{display:block}
     .attachItem{width:100%;display:flex;align-items:center;gap:12px;border:none;background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;font-size:16px;text-align:left;color:var(--black)}
     .attachItem:hover{background:#f6f6f6}
     .attachItem svg{width:22px;height:22px;stroke:currentColor}
+
     .modal{position:fixed;inset:var(--header-h) 0 0 0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:150;overscroll-behavior:contain}
     .sheet{width:min(420px,92vw);max-height:88vh;flex-direction:column;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 30px 60px rgba(0,0,0,.2);margin:0 auto}
     .sheet header{position:sticky;top:0;z-index:10;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
@@ -108,13 +117,16 @@
     .alert{font-size:.95rem;padding:10px 12px;border-radius:10px;border:1px solid var(--line)}
     .alert.ok{background:#eefbf1;border-color:#b7e4c7;color:#1b5e20}
     .alert.err{background:#fff1f1;border-color:#ffd3d3;color:#7a1313}
+
     body.modal-open{position:fixed;overflow:hidden;width:100%}
     body.modal-open .composer{pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .15s ease,transform .15s ease}
+
     @media (min-width:680px){.modal{align-items:center}}
     @media (max-width:480px){
       .modal{padding:8px}
       .sheet{width:calc(100vw - 16px);margin:8px;border-radius:16px;max-height:calc(100vh - var(--header-h) - 16px)}
     }
+
     .profileRow{display:grid;gap:10px}
     .danger{background:var(--red)!important;color:#fff!important}
     .dark{background:#000!important;color:#fff!important}
@@ -287,12 +299,13 @@
     document.documentElement.style.setProperty('--header-h',h+'px')
   }
 
+  // Alto real del composer SIN su padding-bottom (que ya incluye safe-area).
   function setComposerHeightVar(){
     const c=$('#composer');
     if(!c){document.documentElement.style.setProperty('--composer-h','0px');return}
     const cs=getComputedStyle(c);
     const pb=parseFloat(cs.paddingBottom)||0;
-    const h=Math.max(0,c.offsetHeight - pb);
+    const h=Math.max(0,c.offsetHeight - pb); // sólo la barra visible
     document.documentElement.style.setProperty('--composer-h',h+'px');
   }
 
@@ -324,7 +337,7 @@
   function parseReplyPrefix(raw=''){const m=/^\s*r\((\d+)\)\s*/i.exec(String(raw));return m?{rootId:Number(m[1]),rest:String(raw).slice(m[0].length).trim()}:{rootId:null,rest:String(raw).trim()}}
   function getRootIdFor(p){return(p&&p.parent)?p.parent:(p?.id??null)}
   async function ensureServerId(p){if(!p)return null;if(p._server)return p.id;await loadRemote();const candidate=feed.slice().reverse().find(x=>x.user===p.user&&x.text===p.text);return candidate?candidate.id:(p.id??null)}
-  function extractTagsAndClean(raw){const tags=[];const re=/(^|\s)#([\p{L}\p{N}_-]+)/gu;let m,used=new Set;while((m=re.exec(raw))!==null){const tag='#'+m[2].toLowerCase();if(!used.has(tag)){tags.push(tag);used.add(tag}}const clean=raw.replace(re,(full,sp)=>sp?sp:'').replace(/\s{2,}/g,' ').trim();return{clean,tags}}
+  function extractTagsAndClean(raw){const tags=[];const re=/(^|\s)#([\p{L}\p{N}_-]+)/gu;let m,used=new Set;while((m=re.exec(raw))!==null){const tag='#'+m[2].toLowerCase();if(!used.has(tag)){tags.push(tag);used.add(tag)}}const clean=raw.replace(re,(full,sp)=>sp?sp:'').replace(/\s{2,}/g,' ').trim();return{clean,tags}}
   function extractFotoToken(text){const re=/\bf\((\d+)\)/i;const m=/\bf\((\d+)\)/i.exec(String(text||''));if(!m)return{fotoId:null,textNoFoto:String(text||'')};const id=Number(m[1]);const textNoFoto=String(text||'').replace(re,'').replace(/\s{2,}/g,' ').trim();return{fotoId:isFinite(id)?id:null,textNoFoto}}
 
   async function loadRemote(){
@@ -549,6 +562,9 @@
 </script>
 </body>
 </html>
+
+
+
 
 
 
