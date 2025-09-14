@@ -1,6 +1,7 @@
 // /api/cont.js
 'use strict';
 
+/* ================== helpers respuesta ================== */
 function sendPlain(res, code, text = 'Nada que ver acá 𖠂') {
   res.statusCode = code;
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -13,6 +14,7 @@ function sendJson(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
+/* ================== parseo body (json o form) ================== */
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -29,6 +31,7 @@ function parseBody(req) {
   });
 }
 
+/* ================== supabase utils ================== */
 const trimBase = (u) => String(u || '').replace(/\/+$/, '');
 
 function pickKey() {
@@ -36,37 +39,10 @@ function pickKey() {
   return SUPABASE_SERVICE_ROLE || SRV || AN || '';
 }
 
-async function insertUso({ base, key, nuevo }) {
-  const payload = { usos: 1, nuevos: nuevo ? 1 : 0 };
-  const url = `${trimBase(base)}/rest/v1/contadorusos`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify(payload),
-  });
-  const raw = await r.text();
-  if (!r.ok) {
-    let msg = `No se pudo registrar (HTTP ${r.status}).`;
-    try {
-      const j = JSON.parse(raw);
-      const parts = ['message', 'hint', 'details'].map((k) => j?.[k]).filter(Boolean);
-      if (parts.length) msg = parts.join(' — ');
-    } catch {}
-    const e = new Error(msg);
-    e.status = r.status;
-    throw e;
-  }
-  const rows = raw ? JSON.parse(raw) : [];
-  return rows[0] || null;
-}
-
+/* ================== handler ================== */
 module.exports = async (req, res) => {
   try {
+    // CORS + preflight
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -83,17 +59,50 @@ module.exports = async (req, res) => {
     if (!LNK || !KEY) return sendJson(res, 500, { ok: false, message: 'Error del servidor' });
 
     const body = await parseBody(req);
-    const op = String(body.op || 'bump').toLowerCase();
 
-    if (op === 'bump') {
-      const nuevo = body.nuevo === true || body.nuevo === 'true' || Number(body.nuevo) === 1;
-      const row = await insertUso({ base: LNK, key: KEY, nuevo });
-      return sendJson(res, 201, { ok: true, uso: row });
+    // Permitimos { usos:1 }, { nuevos:1 } o ambos. Coerción segura.
+    let usos = Number(body.usos);
+    let nuevos = Number(body.nuevos);
+    usos = Number.isFinite(usos) && usos > 0 ? usos : 0;
+    nuevos = Number.isFinite(nuevos) && nuevos > 0 ? nuevos : 0;
+
+    if (usos <= 0 && nuevos <= 0) {
+      return sendJson(res, 400, { ok: false, message: 'Nada para registrar' });
     }
 
-    return sendJson(res, 400, { ok: false, message: 'Operación no soportada' });
+    // Armamos el payload. El id y created_at los maneja la DB (default/identity).
+    const payload = {};
+    if (usos > 0) payload.usos = usos;
+    if (nuevos > 0) payload.nuevos = nuevos;
+
+    const url = `${trimBase(LNK)}/rest/v1/contadorusos`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+        apikey: KEY,
+        Authorization: `Bearer ${KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const raw = await r.text();
+    if (!r.ok) {
+      let msg = `No se pudo registrar (HTTP ${r.status}).`;
+      try {
+        const j = JSON.parse(raw);
+        const parts = ['message', 'hint', 'details'].map((k) => j?.[k]).filter(Boolean);
+        if (parts.length) msg = parts.join(' — ');
+      } catch {}
+      return sendJson(res, 400, { ok: false, message: msg });
+    }
+
+    const rows = raw ? JSON.parse(raw) : [];
+    return sendJson(res, 201, { ok: true, row: rows[0] || null });
   } catch (e) {
     const status = e?.status ? Number(e.status) : 500;
     return sendJson(res, status, { ok: false, message: String(e?.message || e) });
   }
 };
+
