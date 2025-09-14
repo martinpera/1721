@@ -269,6 +269,7 @@
   const POST_ENDPOINT='/api/post';
   const DELETE_ENDPOINT='/api/delete';
   let IS_EDITING=false;
+  function normalizeName(s){return String(s||'').toLowerCase().replace(/\s+/g,'')}
   function pad(n){return n<10?'0'+n:''+n}
   function fmtShort(ts){const d=new Date(ts);const dd=pad(d.getDate());const mm=pad(d.getMonth()+1);const yy=pad(d.getFullYear()%100);const hh=pad(d.getHours());const mi=pad(d.getMinutes());const ss=pad(d.getSeconds());return`${dd}/${mm}/${yy} (${hh}:${mi}:${ss})`}
   function fmtShortNoYear(ts){const d=new Date(ts);const dd=pad(d.getDate());const mm=pad(d.getMonth()+1);const hh=pad(d.getHours());const mi=pad(d.getMinutes());const ss=pad(d.getSeconds());return`${dd}/${mm} (${hh}:${mi}:${ss})`}
@@ -494,9 +495,52 @@
   const spassword=$('#spassword');const togglePwdSignup=$('#togglePwdSignup');
   togglePwdSignup.addEventListener('click',()=>{const show=spassword.type==='password';spassword.type=show?'text':'password';togglePwdSignup.setAttribute('aria-pressed',String(show));togglePwdSignup.textContent=show?'Ocultar':'Mostrar'});
   const loginForm=$('#loginForm'),loginBtn=$('#loginSubmit'),loginMsg=$('#loginMsg');
-  loginForm.addEventListener('submit',async e=>{e.preventDefault();loginMsg.style.display='none';loginMsg.className='alert';try{loginBtn.disabled=true;const original=loginBtn.textContent;loginBtn.textContent='Entrando…';const payload=Object.fromEntries(new FormData(loginForm));const res=await fetch(loginForm.action||'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};loginMsg.style.display='block';if(res.ok&&data.ok){const nombre=data.nombre||payload.nombre||payload.email||'user';localStorage.setItem('user_nombre',nombre);if(!localStorage.getItem('user_since'))localStorage.setItem('user_since',String(Date.now()));loginMsg.classList.add('ok');loginMsg.textContent=data.message||'Sesión iniciada.';setTimeout(()=>{closeModal()},700)}else{loginMsg.classList.add('err');loginMsg.textContent=data.message||'No autorizado.'}loginBtn.textContent=original;loginBtn.disabled=false}catch{loginBtn.disabled=false;loginMsg.style.display='block';loginMsg.classList.add('err');loginMsg.textContent='Error de red.'}});
   const signupForm=$('#signupForm'),signupBtn=$('#signupSubmit'),signupMsg=$('#signupMsg');
-  signupForm.addEventListener('submit',async e=>{e.preventDefault();signupMsg.style.display='none';signupMsg.className='alert';try{signupBtn.disabled=true;const original=signupBtn.textContent;signupBtn.textContent='Creando…';const payload=Object.fromEntries(new FormData(signupForm));const res=await fetch(signupForm.action||'/api/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};signupMsg.style.display='block';if(res.ok&&data.ok){signupMsg.classList.add('ok');signupMsg.textContent=data.message||'Cuenta creada.';setTimeout(()=>{closeModal();openModal(accountModal)},900)}else{signupMsg.classList.add('err');signupMsg.textContent=data.message||'No se pudo crear.'}signupBtn.textContent=original;signupBtn.disabled=false}catch{signupBtn.disabled=false;signupMsg.style.display='block';signupMsg.classList.add('err');signupMsg.textContent='Error de red.'}});
+  const lnombre=$('#lnombre');const snombre=$('#snombre');
+  [lnombre,snombre].forEach(inp=>{inp.addEventListener('input',()=>{inp.value=normalizeName(inp.value)})});
+  loginForm.addEventListener('submit',async e=>{
+    e.preventDefault();loginMsg.style.display='none';loginMsg.className='alert';
+    try{
+      loginBtn.disabled=true;const original=loginBtn.textContent;loginBtn.textContent='Entrando…';
+      const formData=new FormData(loginForm);
+      const nombreNorm=normalizeName(formData.get('nombre'));
+      const payload={nombre:nombreNorm,password:String(formData.get('password')||'')};
+      const res=await fetch(loginForm.action||'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});
+      const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};
+      loginMsg.style.display='block';
+      if(res.ok&&data.ok){
+        const nombre=data.nombre?normalizeName(data.nombre):nombreNorm;
+        localStorage.setItem('user_nombre',nombre);
+        if(!localStorage.getItem('user_since'))localStorage.setItem('user_since',String(Date.now()));
+        loginMsg.classList.add('ok');loginMsg.textContent=data.message||'Sesión iniciada.';setTimeout(()=>{closeModal()},700)
+      }else{
+        loginMsg.classList.add('err');loginMsg.textContent=data.message||'No autorizado.'
+      }
+      loginBtn.textContent=original;loginBtn.disabled=false
+    }catch{
+      loginBtn.disabled=false;loginMsg.style.display='block';loginMsg.classList.add('err');loginMsg.textContent='Error de red.'
+    }
+  });
+  signupForm.addEventListener('submit',async e=>{
+    e.preventDefault();signupMsg.style.display='none';signupMsg.className='alert';
+    try{
+      signupBtn.disabled=true;const original=signupBtn.textContent;signupBtn.textContent='Creando…';
+      const formData=new FormData(signupForm);
+      const nombreNorm=normalizeName(formData.get('nombre'));
+      const payload={nombre:nombreNorm,password:String(formData.get('password')||'')};
+      const res=await fetch(signupForm.action||'/api/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});
+      const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};
+      signupMsg.style.display='block';
+      if(res.ok&&data.ok){
+        signupMsg.classList.add('ok');signupMsg.textContent=data.message||'Cuenta creada.';setTimeout(()=>{closeModal();openModal(accountModal)},900)
+      }else{
+        signupMsg.classList.add('err');signupMsg.textContent=data.message||'No se pudo crear.'
+      }
+      signupBtn.textContent=original;signupBtn.disabled=false
+    }catch{
+      signupBtn.disabled=false;signupMsg.style.display='block';signupMsg.classList.add('err');signupMsg.textContent='Error de red.'
+    }
+  });
   $('#logoutBtn').addEventListener('click',()=>{localStorage.removeItem('user_nombre');localStorage.removeItem('user_since');closeModal()});
   document.addEventListener('click',e=>{
     const link=e.target.closest('.text a');if(!link)return;
@@ -517,11 +561,6 @@
 </script>
 </body>
 </html>
-
-
-
-
-
 
 
 
