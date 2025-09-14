@@ -269,6 +269,7 @@
   const POST_ENDPOINT='/api/post';
   const DELETE_ENDPOINT='/api/delete';
   let IS_EDITING=false;
+  function normalizeNameLive(input){const pos=input.selectionStart;const v=input.value;const nv=v.toLowerCase().replace(/\s+/g,'');if(v!==nv){input.value=nv;if(typeof pos==='number'){input.setSelectionRange(Math.min(pos,nv.length),Math.min(pos,nv.length))}}}
   function normalizeName(s){return String(s||'').toLowerCase().replace(/\s+/g,'')}
   function pad(n){return n<10?'0'+n:''+n}
   function fmtShort(ts){const d=new Date(ts);const dd=pad(d.getDate());const mm=pad(d.getMonth()+1);const yy=pad(d.getFullYear()%100);const hh=pad(d.getHours());const mi=pad(d.getMinutes());const ss=pad(d.getSeconds());return`${dd}/${mm}/${yy} (${hh}:${mi}:${ss})`}
@@ -497,7 +498,7 @@
   const loginForm=$('#loginForm'),loginBtn=$('#loginSubmit'),loginMsg=$('#loginMsg');
   const signupForm=$('#signupForm'),signupBtn=$('#signupSubmit'),signupMsg=$('#signupMsg');
   const lnombre=$('#lnombre');const snombre=$('#snombre');
-  [lnombre,snombre].forEach(inp=>{inp.addEventListener('input',()=>{inp.value=normalizeName(inp.value)})});
+  [lnombre,snombre].forEach(inp=>{inp.addEventListener('input',()=>normalizeNameLive(inp));inp.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text');document.execCommand('insertText',false,normalizeName(t))})});
   loginForm.addEventListener('submit',async e=>{
     e.preventDefault();loginMsg.style.display='none';loginMsg.className='alert';
     try{
