@@ -31,18 +31,17 @@ function parseBody(req) {
   });
 }
 
-/* ================== supabase utils ================== */
+/* ================== utils ================== */
 const trimBase = (u) => String(u || '').replace(/\/+$/, '');
-
 function pickKey() {
-  const { SUPABASE_SERVICE_ROLE, SRV, AN } = process.env;
-  return SUPABASE_SERVICE_ROLE || SRV || AN || '';
+  const { ROLE, AN } = process.env;
+  return ROLE || AN || '';
 }
 
 /* ================== handler ================== */
 module.exports = async (req, res) => {
   try {
-    // CORS + preflight
+    // CORS básico + preflight
     if (req.method === 'OPTIONS') {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -60,7 +59,7 @@ module.exports = async (req, res) => {
 
     const body = await parseBody(req);
 
-    // Permitimos { usos:1 }, { nuevos:1 } o ambos. Coerción segura.
+    // Permitimos { usos:1 }, { nuevos:1 } o ambos
     let usos = Number(body.usos);
     let nuevos = Number(body.nuevos);
     usos = Number.isFinite(usos) && usos > 0 ? usos : 0;
@@ -70,7 +69,6 @@ module.exports = async (req, res) => {
       return sendJson(res, 400, { ok: false, message: 'Nada para registrar' });
     }
 
-    // Armamos el payload. El id y created_at los maneja la DB (default/identity).
     const payload = {};
     if (usos > 0) payload.usos = usos;
     if (nuevos > 0) payload.nuevos = nuevos;
@@ -105,4 +103,3 @@ module.exports = async (req, res) => {
     return sendJson(res, status, { ok: false, message: String(e?.message || e) });
   }
 };
-
