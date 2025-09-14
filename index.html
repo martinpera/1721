@@ -75,7 +75,7 @@
       padding:10px 12px calc(10px + var(--safe-b)); box-shadow:0 -6px 30px rgba(0,0,0,.06)
     }
     .composer .row{max-width:var(--max);margin:0 auto;display:flex;align-items:center;gap:8px;justify-content:center;position:relative}
-    .composer textarea{flex:1;max-width:var(--composer-max);border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:16px;outline:none;min-width:0;min-height:44px;max-height:40vh;resize:vertical}
+    .composer input[type="text"]{flex:1;max-width:var(--composer-max);border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:16px;outline:none;min-width:0}
     .composer .send{border:none;background:#111;color:#fff;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer}
     .composer .preview{max-width:var(--max);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
     .chip{border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.85rem;background:#fff}
@@ -164,7 +164,7 @@
           Sacar foto
         </button>
       </div>
-      <textarea id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)"></textarea>
+      <input type="text" id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)">
       <button class="send" id="sendBtn">Publicar</button>
     </div>
     <div class="preview" id="composePreview"></div>
@@ -318,7 +318,11 @@
     const clean=raw.replace(re,(full,sp)=>sp?sp:'').replace(/[^\S\r\n]{2,}/g,' ').trim();
     return{clean,tags}
   }
-  function extractFotoToken(text){const re=/\bf\((\d+)\)/i;const m=/\bf\((\d+)\)/i.exec(String(text||''));if(!m)return{fotoId:null,textNoFoto:String(text||'')};const id=Number(m[1]);const textNoFoto=String(text||'').replace(re,'').replace(/\s{2,}/g,' ').trim();return{fotoId:isFinite(id)?id:null,textNoFoto}}
+  function extractFotoToken(text){
+    const re=/\bf\((\d+)\)/i;const m=/\bf\((\d+)\)/i.exec(String(text||''));if(!m)return{fotoId:null,textNoFoto:String(text||'')};
+    const id=Number(m[1]);const textNoFoto=String(text||'').replace(re,'').replace(/[^\S\r\n]{2,}/g,' ').trim();
+    return{fotoId:isFinite(id)?id:null,textNoFoto}
+  }
   async function loadRemote(){
     try{
       const r=await fetch('/api/obtain');const data=await r.json();
@@ -467,6 +471,19 @@
   const composeTxt=$('#composeTxt');
   function requireLogin(onOk){if(isLogged()){onOk?.();return}openModal(accountModal);$('#lnombre')?.focus()}
   $('#sendBtn').addEventListener('click',()=>requireLogin(publish));
+  composeTxt.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      const el=e.target;
+      const start=el.selectionStart??el.value.length;
+      const end=el.selectionEnd??start;
+      const before=el.value.slice(0,start);
+      const after=el.value.slice(end);
+      el.value=before+'\n'+after;
+      const pos=start+1;
+      requestAnimationFrame(()=>{el.setSelectionRange(pos,pos)});
+    }
+  });
   async function publish(){
     const textRaw=composeTxt.value.trim();if(!textRaw){composeTxt.focus();return}
     const fotoParsed=extractFotoToken(textRaw);
@@ -500,7 +517,7 @@
   const loginForm=$('#loginForm'),loginBtn=$('#loginSubmit'),loginMsg=$('#loginMsg');
   loginForm.addEventListener('submit',async e=>{e.preventDefault();loginMsg.style.display='none';loginMsg.className='alert';try{loginBtn.disabled=true;const original=loginBtn.textContent;loginBtn.textContent='Entrando…';const payload=Object.fromEntries(new FormData(loginForm));const res=await fetch(loginForm.action||'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};loginMsg.style.display='block';if(res.ok&&data.ok){const nombre=data.nombre||payload.nombre||payload.email||'user';localStorage.setItem('user_nombre',nombre);if(!localStorage.getItem('user_since'))localStorage.setItem('user_since',String(Date.now()));loginMsg.classList.add('ok');loginMsg.textContent=data.message||'Sesión iniciada.';setTimeout(()=>{closeModal()},700)}else{loginMsg.classList.add('err');loginMsg.textContent=data.message||'No autorizado.'}loginBtn.textContent=original;loginBtn.disabled=false}catch{loginBtn.disabled=false;loginMsg.style.display='block';loginMsg.classList.add('err');loginMsg.textContent='Error de red.'}});
   const signupForm=$('#signupForm'),signupBtn=$('#signupSubmit'),signupMsg=$('#signupMsg');
-  signupForm.addEventListener('submit',async e=>{e.preventDefault();signupMsg.style.display='none';signupMsg.className='alert';try{signupBtn.disabled=true;const original=signupBtn.textContent;signupBtn.textContent='Creando…';const payload=Object.fromEntries(new FormData(signupForm));const res=await fetch(signupForm.action||'/api/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};signupMsg.style.display='block';if(res.ok&&data.ok){signupMsg.classList.add('ok');signupMsg.textContent=data.message||'Cuenta creado.';setTimeout(()=>{closeModal();openModal(accountModal)},900)}else{signupMsg.classList.add('err');signupMsg.textContent=data.message||'No se pudo crear.'}signupBtn.textContent=original;signupBtn.disabled=false}catch{signupBtn.disabled=false;signupMsg.style.display='block';signupMsg.classList.add('err');signupMsg.textContent='Error de red.'}});
+  signupForm.addEventListener('submit',async e=>{e.preventDefault();signupMsg.style.display='none';signupMsg.className='alert';try{signupBtn.disabled=true;const original=signupBtn.textContent;signupBtn.textContent='Creando…';const payload=Object.fromEntries(new FormData(signupForm));const res=await fetch(signupForm.action||'/api/crear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'same-origin'});const ct=res.headers.get('content-type')||'';const data=ct.includes('application/json')?await res.json():{ok:res.ok};signupMsg.style.display='block';if(res.ok&&data.ok){signupMsg.classList.add('ok');signupMsg.textContent=data.message||'Cuenta creada.';setTimeout(()=>{closeModal();openModal(accountModal)},900)}else{signupMsg.classList.add('err');signupMsg.textContent=data.message||'No se pudo crear.'}signupBtn.textContent=original;signupBtn.disabled=false}catch{signupBtn.disabled=false;signupMsg.style.display='block';signupMsg.classList.add('err');signupMsg.textContent='Error de red.'}});
   $('#logoutBtn').addEventListener('click',()=>{localStorage.removeItem('user_nombre');localStorage.removeItem('user_since');closeModal()});
   document.addEventListener('click',e=>{
     const link=e.target.closest('.text a');if(!link)return;
@@ -521,6 +538,7 @@
 </script>
 </body>
 </html>
+
 
 
 
