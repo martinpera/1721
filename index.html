@@ -29,7 +29,7 @@
     .text a{color:#0a7;text-decoration:underline}
     header{position:fixed;top:0;left:0;right:0;z-index:200;background:#fff;border-bottom:1px solid var(--line)}
     .top{max-width:var(--max);margin:0 auto;padding:10px 12px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center;gap:10px;color:var(--black)}
-    .brandBtn,.iconbtn{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;cursor:pointer;color:var(--black)}
+    .brandBtn,.iconbtn{display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:40px;cursor:pointer;color:#black}
     .brandBtn{font-weight:800}
     .brandBtn span{font-size:20px;line-height:1}
     .top svg{stroke:currentColor;color:var(--black)}
@@ -74,9 +74,9 @@
       position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;border-top:1px solid var(--line);
       padding:10px 12px calc(10px + var(--safe-b)); box-shadow:0 -6px 30px rgba(0,0,0,.06)
     }
-    .composer .row{max-width:var(--max);margin:0 auto;display:flex;align-items:flex-start;gap:8px;justify-content:center;position:relative}
-    .composer textarea{flex:1;max-width:var(--composer-max);border:1px solid var(--line);border-radius:12px;padding:12px 12px;font-size:16px;outline:none;min-width:0;min-height:56px;resize:vertical;background:#fff}
-    .composer .send{border:none;background:#111;color:#fff;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;height:44px;align-self:flex-end}
+    .composer .row{max-width:var(--max);margin:0 auto;display:flex;align-items:center;gap:8px;justify-content:center;position:relative}
+    .composer textarea{flex:1;max-width:var(--composer-max);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:16px;outline:none;min-width:0;height:44px;min-height:44px;max-height:44px;resize:none;overflow:auto;background:#fff}
+    .composer .send{border:none;background:#111;color:#fff;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;height:44px}
     .composer .preview{max-width:var(--max);margin:6px auto 0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
     .chip{border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:.85rem;background:#fff}
     .attach{border:1px solid var(--line);background:#fff;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#000}
@@ -521,8 +521,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
