@@ -9,8 +9,8 @@
   :root{--bg:#0a0a0a;--ink:#eaeaea;--line:#1a1a1a;--ring:#2b2b2b;--max:1100px;--composer-h:0px;--red:#e02424;--red-2:#ff6b6b}
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow:hidden}
-  .shell{height:100svh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);display:grid;grid-template-rows:56px 1fr 88px;gap:8px}
+  body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow:auto}
+  .shell{min-height:100svh;padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 120px) env(safe-area-inset-left);display:grid;grid-template-rows:56px 1fr;gap:8px}
   header{display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);gap:10px;position:relative}
   .left,.right{display:flex;align-items:center;gap:10px}
   .btn,.select{font-size:12px;color:var(--ink);background:#111;border:1px solid var(--ring);border-radius:10px;height:32px;padding:0 10px;user-select:none}
@@ -23,8 +23,8 @@
   .stage{display:grid;place-items:center;padding:0 10px}
   canvas#visor{display:block;width:80%;height:auto;max-height:calc(100% - 4px);outline:1px solid var(--line);border-radius:14px;background:#0b0b0b}
   @media (min-width:900px){canvas#visor{width:56%}}
-  .bar{display:grid;place-items:center}
-  .shutter{width:76px;height:76px;border-radius:999px;position:relative;cursor:pointer;border:1px solid var(--ring);background:radial-gradient(circle at 50% 50%,#1b1b1b 42%,#121212 43%) no-repeat,radial-gradient(circle at 50% 50%,#2a2a2a 30%,#1a1a1a 31%) no-repeat;background-size:100% 100%,78% 78%;background-position:center;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+  .bar{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 12px);display:grid;place-items:center;z-index:50;pointer-events:none}
+  .shutter{width:76px;height:76px;border-radius:999px;position:relative;cursor:pointer;border:1px solid var(--ring);background:radial-gradient(circle at 50% 50%,#1b1b1b 42%,#121212 43%) no-repeat,radial-gradient(circle at 50% 50%,#2a2a2a 30%,#1a1a1a 31%) no-repeat;background-size:100% 100%,78% 78%;background-position:center;box-shadow:0 10px 26px rgba(0,0,0,.5);pointer-events:auto}
   .shutter:active{transform:scale(.98)}
   .shutter::after{content:'';position:absolute;inset:8px;border-radius:999px;border:2px solid rgba(255,255,255,.06)}
   .composer{position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;color:#171717;border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.06);display:none}
@@ -74,8 +74,8 @@
       </div>
     </header>
     <div class="stage"><canvas id="visor"></canvas></div>
-    <div class="bar"><button id="shutterBtn" class="shutter" aria-label="Capturar"></button></div>
   </div>
+  <div class="bar"><button id="shutterBtn" class="shutter" aria-label="Capturar"></button></div>
   <div class="composer" id="composer">
     <div class="row">
       <input type="text" id="composeTxt" placeholder="Escribí algo… (podés usar #hashtags)">
