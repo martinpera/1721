@@ -562,44 +562,14 @@
   document.addEventListener('click',e=>{if(!attachMenu.classList.contains('open'))return;if(!e.target.closest('#attachMenu')&&!e.target.closest('#attachBtn')){attachMenu.classList.remove('open');attachBtn.setAttribute('aria-expanded','false')}})
   $$('#attachMenu .attachItem').forEach(btn=>btn.addEventListener('click',()=>{const href=btn.getAttribute('data-href');if(href)location.href=href}))
   try{fetch(CONT_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usos:1}),credentials:'same-origin'})}catch{}
-
-  /* === NOTIFICACIONES: registrar SW, pedir permiso y notificar a las 11:00 locales === */
-  async function scheduleDaily(reg, hour, minute){
-    const now = new Date();
-    const target = new Date();
-    target.setHours(hour, minute, 0, 0);
-    if (target <= now) target.setDate(target.getDate() + 1);
-    const delay = target - now;
-
-    setTimeout(() => {
-      try {
-        reg.showNotification('1721', { body: 'Hay novedades del mediodía. Entrá a ver.' });
-      } catch {}
-      // Reprogramar para el día siguiente a la misma hora
-      scheduleDaily(reg, hour, minute);
-    }, delay);
-  }
-
-  async function initNotificationsAt1100(){
-    if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
-    try{
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      let perm = Notification.permission;
-      if (perm !== 'granted') {
-        try { perm = await Notification.requestPermission(); } catch {}
-      }
-      if (perm === 'granted') {
-        try { reg.showNotification('1721', { body: 'Notificaciones activadas' }); } catch {}
-        scheduleDaily(reg, 11, 0); // 11:00 hora local del navegador
-      }
-    }catch(e){}
-  }
-
-  // Pedir permiso y programar apenas cargue (sin cambiar tu UI)
-  window.addEventListener('load', initNotificationsAt1100);
 </script>
 </body>
 </html>
+
+
+
+
+
 
 
 
