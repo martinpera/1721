@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Push 1721</title>
+</head>
+<body>
+  <h1>Test de Notificaciones Push</h1>
+  <button id="subscribeBtn">Suscribirme</button>
+  <pre id="output"></pre>
+
+<script>
+const publicVapidKey = "BM5K1wwi6zzL32Uoh4T10fDwtRbUaNsjhVDCy9INPld7O-znovrWgu866rrQX1b1E3Q52WyiBd3GxGgQ0-Ug_dE";
+
+if ("serviceWorker" in navigator && "PushManager" in window) {
+  navigator.serviceWorker.register("sw.js").then(() => {
+    console.log("Service Worker registrado");
+  });
+}
+
+document.getElementById("subscribeBtn").addEventListener("click", async () => {
+  const reg = await navigator.serviceWorker.ready;
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+  });
+
+  document.getElementById("output").textContent = JSON.stringify(sub);
+});
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+</script>
+</body>
+</html>
