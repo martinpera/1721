@@ -74,7 +74,7 @@
     const ok=await ensurePermission();
     if(ok){
       try{new Notification('1721',{body:'Notificaciones activadas'})}catch{}
-      scheduleDaily(11,30);
+      scheduleDaily(11,00);
     }
   });
 
@@ -88,7 +88,7 @@
   window.addEventListener('load',async()=>{
     if(Notification && Notification.permission==='granted'){
       statusEl.textContent='Estado: permiso concedido';
-      scheduleDaily(11,30);
+      scheduleDaily(11,00);
     }else{
       statusEl.textContent='Estado: tocá “Habilitar notificaciones”';
     }
